@@ -1,11 +1,691 @@
 "use strict";
-const VENUES=["1 Hotel","AC By Marriott Melbourne Southbank","CENTREPIECE","Crown Melbourne","Crowne Plaza","Doubletree by Hilton","Events Flemington","Hilton Melbourne Little Queen St","Hyatt Place Essendon Fields","Hyde Melbourne Place","Marriott Melbourne","MCG","Mel Base","Melbourne Marriott Hotel Docklands","Melbourne Showgrounds","Mercure Doncaster","Pan Pacific","PARKROYAL Airport","Park Hyatt","Pullman Albert Park","The Langham","Vibe Docklands","Warehouse","Westin"],$=id=>document.getElementById(id),K={c:"oncall.v041.calls",s:"oncall.v041.settings",a:"oncall.v041.active"};const state={calls:[],active:null,settings:{employeeName:"Brendan T",weekEnding:""}};
-function err(e){$("errorBox").textContent=`Something went wrong: ${e?.message||e}`;$("errorBox").classList.remove("hidden")}window.addEventListener("error",e=>err(e.error||e.message));
-function iso(d=new Date()){let z=d.getTimezoneOffset();return new Date(d-z*60000).toISOString().slice(0,10)}function tm(d=new Date()){let z=d.getTimezoneOffset();return new Date(d-z*60000).toISOString().slice(11,16)}function sun(){let d=new Date();d.setDate(d.getDate()+(d.getDay()?7-d.getDay():0));return iso(d)}function dob(s){let [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)}function dtext(s){return dob(s).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}function ttext(s){let [h,m]=s.split(":").map(Number);return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`}function xdate(s){let d=dob(s);return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`}function mins(s){let [h,m]=s.split(":").map(Number);return h*60+m}function diff(a,b){let d=mins(b)-mins(a);return d<0?d+1440:d}function q(n){return Math.max(15,Math.round(Math.max(0,n)/15)*15)}function wknd(s){let d=dob(s).getDay();return d===0||d===6}function dur(n){let h=Math.floor(n/60),m=n%60;return h?`${h} h${m?` ${m} min`:""}`:`${m} min`}function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
-function save(){localStorage.setItem(K.c,JSON.stringify(state.calls));localStorage.setItem(K.s,JSON.stringify(state.settings));state.active?localStorage.setItem(K.a,JSON.stringify(state.active)):localStorage.removeItem(K.a);$("status").textContent="Saved on this device"}function load(){try{state.calls=JSON.parse(localStorage.getItem(K.c)||"[]")}catch{};try{state.settings={...state.settings,...JSON.parse(localStorage.getItem(K.s)||"{}")}}catch{};if(!state.settings.weekEnding)state.settings.weekEnding=sun();try{state.active=JSON.parse(localStorage.getItem(K.a)||"null")}catch{}}function opts(id){$(id).innerHTML=`<option value="">Choose a venue</option>${VENUES.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")}`}function order(a){return [...a].sort((x,y)=>x.date.localeCompare(y.date)||x.callStart.localeCompare(y.callStart)||String(x.createdAt).localeCompare(String(y.createdAt)))}function first(c){return order(state.calls.filter(x=>x.attended&&x.date===c.date))[0]?.id===c.id}function remote(c){return c.attended?0:q(diff(c.callStart,c.callEnd))}function actual(c){return !c.attended?0:q(c.onsiteStart&&c.onsiteEnd?diff(c.onsiteStart,c.onsiteEnd):diff(c.callStart,c.callEnd))}function attended(c){return !c.attended?0:(first(c)?Math.max(actual(c),wknd(c.date)?240:60):actual(c))}
-function view(n){["home","start","finish","entries","stats"].forEach(x=>$(x+"View").classList.toggle("hidden",x!==n));document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===n));if(n==="entries")entries();if(n==="stats")stats();scrollTo({top:0,behavior:"smooth"})}function clock(){let d=new Date();$("clockTime").textContent=d.toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"});$("clockDate").textContent=d.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}function home(){let a=state.active;if(!a){$("clockHeading").textContent="Ready for a call";$("clockButton").textContent="Clock in";$("clockButton").classList.remove("out");$("activeCall").classList.add("hidden");return}$("clockHeading").textContent="Call in progress";$("clockButton").textContent="Clock out";$("clockButton").classList.add("out");$("activeCall").innerHTML=`<strong>${esc(a.caller)} · ${esc(a.venue)}</strong><p>Started ${esc(dtext(a.date))} at ${esc(ttext(a.callStart))}</p><p>${esc(a.problem)}</p>`;$("activeCall").classList.remove("hidden")}
-function entries(){let cs=order(state.calls),r=cs.reduce((n,c)=>n+remote(c),0),a=cs.reduce((n,c)=>n+attended(c),0);$("callsTotal").textContent=cs.length;$("remoteTotal").textContent=dur(r);$("attendedTotal").textContent=dur(a);$("paidTotal").textContent=dur(r+a);if(!cs.length){$("entries").innerHTML='<p class="empty">No entries to show.</p>';return}$("entries").innerHTML='<div class="entry-header"><div>Time</div><div>Name</div><div>Problem</div><div>Total</div><div>Actions</div></div>'+cs.map(c=>`<article class="entry-grid ${c.attended?"attended":""}"><div class="entry-cell"><div class="line-one">${esc(ttext(c.callStart))}</div><div class="line-two">${esc(ttext(c.callEnd))}</div></div><div class="entry-cell"><div class="line-one">${esc(c.caller)}</div><div class="line-two">${esc(c.venue)}</div></div><div class="entry-cell"><div class="line-one">${esc(c.problem)}</div><div class="line-two">${esc(c.resolution||"No resolution entered")}</div></div><div class="entry-cell entry-total">${esc(dur(c.attended?attended(c):remote(c)))}</div><div class="entry-actions"><button onclick="editEntry('${c.id}')">EDIT</button><button onclick="deleteEntry('${c.id}')">DELETE</button></div></article>`).join("")}
-function donut(id,data){let total=data.reduce((n,x)=>n+x.value,0);if(!total){$(id).innerHTML='<p class="empty">No calls recorded yet.</p>';return}let r=53,c=2*Math.PI*r,off=0,ar=data.map(x=>{let l=c*x.value/total,p=`<circle cx="78" cy="78" r="${r}" fill="none" stroke="${x.color}" stroke-width="30" stroke-dasharray="${l} ${c-l}" stroke-dashoffset="${-off}" transform="rotate(-90 78 78)"/>`;off+=l;return p}).join("");$(id).innerHTML=`<div class="chart"><svg class="donut" viewBox="0 0 156 156"><circle cx="78" cy="78" r="53" fill="none" stroke="#293957" stroke-width="30"/>${ar}<text x="78" y="73" text-anchor="middle" fill="#f7f9ff" font-size="25" font-weight="700">${total}</text><text x="78" y="94" text-anchor="middle" fill="#aab7d1" font-size="12">calls</text></svg><div class="legend">${data.map(x=>`<div class="legend-item"><span class="legend-label"><i class="dot" style="background:${x.color}"></i><span>${esc(x.label)}</span></span><strong class="legend-value">${x.value} (${Math.round(x.value/total*100)}%)</strong></div>`).join("")}</div></div>`}function stats(){let cs=state.calls;$("statsSummary").textContent=cs.length?`${cs.length} completed calls analysed.`:"No completed calls recorded yet.";let b=[{label:"00:00–06:00",value:0,color:"#6cc8ff"},{label:"06:00–09:00",value:0,color:"#61dda0"},{label:"17:00–24:00",value:0,color:"#ffd36e"},{label:"Other times",value:0,color:"#aa8cff"}];cs.forEach(c=>{let h=mins(c.callStart);if(h<360)b[0].value++;else if(h<540)b[1].value++;else if(h>=1020)b[2].value++;else b[3].value++});donut("timeChart",b);let co=["#61dda0","#56a9ff","#ffd36e","#aa8cff","#ff8c7a","#70d6c0"],m={};cs.forEach(c=>m[c.venue]=(m[c.venue]||0)+1);donut("venueChart",Object.entries(m).map(([label,value],i)=>({label,value,color:co[i%co.length]})))}
-function begin(){if(state.active)return finish();$("startForm").reset();opts("startVenue");view("start")}function start(e){e.preventDefault();let caller=$("startCaller").value.trim(),venue=$("startVenue").value,problem=$("startProblem").value.trim();if(!caller||!venue||!problem)return alert("Please complete all fields.");let d=new Date();state.active={id:crypto.randomUUID(),date:iso(d),callStart:tm(d),caller,venue,problem,createdAt:d.toISOString()};save();home();view("home")}function finishUpdate(){let a=state.active;if(!a)return;$("finishSummary").textContent=`Started at ${ttext(a.callStart)}. If you finish now, this records as ${dur(q(diff(a.callStart,tm())))}.`;let on=$("finishAttended").checked;$("finishOnsite").classList.toggle("hidden",!on);$("finishNotice").classList.toggle("hidden",!on);if(on){let firstToday=!state.calls.some(c=>c.attended&&c.date===a.date),h=wknd(a.date)?4:1;$("finishNotice").textContent=firstToday?`First attended call today: at least ${h} hour${h===1?"":"s"} will be paid.`:"Additional attended call today uses rounded onsite time."}}function finish(){if(!state.active)return;$("finishForm").reset();finishUpdate();view("finish")}function saveFinish(e){e.preventDefault();let a=state.active,res=$("finishResolution").value.trim(),os=$("finishOnsiteStart").value,oe=$("finishOnsiteEnd").value;if(!res)return alert("Please enter the resolution.");if((os&&!oe)||(!os&&oe))return alert("Enter both onsite times, or leave both blank.");let d=new Date(),c={...a,callEnd:tm(d),resolution:res,attended:$("finishAttended").checked,onsiteStart:os,onsiteEnd:oe};state.calls.push(c);state.active=null;save();home();entries();stats();view("home")}window.editEntry=id=>{let c=state.calls.find(x=>x.id===id);if(!c)return;$("editId").value=c.id;$("editDate").value=c.date;$("editStart").value=c.callStart;$("editEnd").value=c.callEnd;$("editCaller").value=c.caller;opts("editVenue");$("editVenue").value=c.venue;$("editProblem").value=c.problem;$("editResolution").value=c.resolution;$("editAttended").checked=!!c.attended;$("editOnsiteStart").value=c.onsiteStart||"";$("editOnsiteEnd").value=c.onsiteEnd||"";$("editOnsite").classList.toggle("hidden",!c.attended);$("editCard").classList.remove("hidden");$("editCard").scrollIntoView({behavior:"smooth"})};window.deleteEntry=id=>{if(!confirm("Delete this entry?"))return;state.calls=state.calls.filter(c=>c.id!==id);save();entries();stats()};
-function sync(){state.settings.employeeName=$("employeeName").value.trim()||"Brendan T";state.settings.weekEnding=$("weekEnding").value||sun();save()}function copy(){sync();let b=new Blob([JSON.stringify({calls:state.calls,active:state.active,settings:state.settings},null,2)],{type:"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=`On_Call_Backup_${iso()}.json`;a.click();URL.revokeObjectURL(u)}async function restore(f){if(!f)return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d.calls))throw Error("Not a valid saved copy.");if(!confirm("Restore this saved copy?"))return;state.calls=d.calls;state.active=d.active||null;state.settings={...state.settings,...d.settings};$("employeeName").value=state.settings.employeeName;$("weekEnding").value=state.settings.weekEnding;save();home();entries();stats()}catch(e){alert(e.message)}finally{$("restoreInput").value=""}}
-function init(){load();$("employeeName").value=state.settings.employeeName;$("weekEnding").value=state.settings.weekEnding;opts("startVenue");opts("editVenue");clock();setInterval(clock,1000);home();entries();stats();document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>view(b.dataset.view)));$("refreshButton").onclick=()=>location.reload();$("clockButton").onclick=begin;$("startForm").onsubmit=start;$("cancelStart").onclick=()=>view("home");$("finishForm").onsubmit=saveFinish;$("cancelFinish").onclick=()=>view("home");$("finishAttended").onchange=finishUpdate;$("employeeName").onchange=sync;$("weekEnding").onchange=sync;$("editAttended").onchange=()=>$("editOnsite").classList.toggle("hidden",!$("editAttended").checked);$("editForm").onsubmit=e=>{e.preventDefault();let i=state.calls.findIndex(c=>c.id===$("editId").value);if(i<0)return;state.calls[i]={...state.calls[i],date:$("editDate").value,callStart:$("editStart").value,callEnd:$("editEnd").value,caller:$("editCaller").value,venue:$("editVenue").value,problem:$("editProblem").value,resolution:$("editResolution").value,attended:$("editAttended").checked,onsiteStart:$("editOnsiteStart").value,onsiteEnd:$("editOnsiteEnd").value};save();entries();stats();$("editCard").classList.add("hidden")};$("cancelEdit").onclick=()=>$("editCard").classList.add("hidden");["saveHome","saveEntries"].forEach(id=>$(id).onclick=copy);["restoreHome","restoreEntries"].forEach(id=>$(id).onclick=()=>$("restoreInput").click());$("restoreInput").onchange=e=>restore(e.target.files[0]);$("deleteAll").onclick=()=>{if(confirm("Delete all entries?")){state.calls=[];save();entries();stats()}};["exportHome","exportEntries"].forEach(id=>$(id).onclick=()=>alert("Excel export will be restored in the next update."))}try{init()}catch(e){err(e)}
+
+const $ = (id) => document.getElementById(id);
+
+const VENUES = [
+  "1 Hotel",
+  "AC By Marriott Melbourne Southbank",
+  "CENTREPIECE",
+  "Crown Melbourne",
+  "Crowne Plaza",
+  "Doubletree by Hilton",
+  "Events Flemington",
+  "Hilton Melbourne Little Queen St",
+  "Hyatt Place Essendon Fields",
+  "Hyde Melbourne Place",
+  "Marriott Melbourne",
+  "MCG",
+  "Mel Base",
+  "Melbourne Marriott Hotel Docklands",
+  "Melbourne Showgrounds",
+  "Mercure Doncaster",
+  "Pan Pacific",
+  "PARKROYAL Airport",
+  "Park Hyatt",
+  "Pullman Albert Park",
+  "The Langham",
+  "Vibe Docklands",
+  "Warehouse",
+  "Westin"
+];
+
+const STORAGE_KEY = "oncall.v051";
+
+let db = {
+  calls: [],
+  active: null,
+  employee: "Brendan T",
+  week: ""
+};
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  $("saved").textContent = "Saved on this device";
+}
+
+function load() {
+  try {
+    db = {
+      ...db,
+      ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
+    };
+  } catch {
+    db = {
+      calls: [],
+      active: null,
+      employee: "Brendan T",
+      week: ""
+    };
+  }
+
+  if (!Array.isArray(db.calls)) {
+    db.calls = [];
+  }
+
+  if (!db.week) {
+    const date = new Date();
+    date.setDate(date.getDate() + (date.getDay() ? 7 - date.getDay() : 0));
+    db.week = dateISO(date);
+  }
+}
+
+function dateISO(date = new Date()) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
+}
+
+function nowTime() {
+  const date = new Date();
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(11, 16);
+}
+
+function dateObject(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function displayDate(value) {
+  return dateObject(value).toLocaleDateString("en-AU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+}
+
+function timeMinutes(value) {
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+function elapsedMinutes(start, end) {
+  let duration = timeMinutes(end) - timeMinutes(start);
+
+  if (duration < 0) {
+    duration += 1440;
+  }
+
+  return duration;
+}
+
+function roundedMinutes(minutes) {
+  return Math.max(15, Math.round(Math.max(0, minutes) / 15) * 15);
+}
+
+function timeText(value) {
+  const [hour, minute] = value.split(":").map(Number);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+
+  return `${displayHour}:${String(minute).padStart(2, "0")} ${suffix}`;
+}
+
+function durationText(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+
+  if (hours) {
+    return `${hours} h${remainder ? ` ${remainder} min` : ""}`;
+  }
+
+  return `${remainder} min`;
+}
+
+function isWeekend(date) {
+  const day = dateObject(date).getDay();
+  return day === 0 || day === 6;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function orderedCalls(calls) {
+  return [...calls].sort((a, b) => {
+    const dateOrder = a.date.localeCompare(b.date);
+
+    if (dateOrder !== 0) {
+      return dateOrder;
+    }
+
+    return a.start.localeCompare(b.start);
+  });
+}
+
+function firstAttendedCall(call) {
+  const attendedCalls = orderedCalls(
+    db.calls.filter((item) => item.attended && item.date === call.date)
+  );
+
+  return attendedCalls[0]?.id === call.id;
+}
+
+function paidMinutes(call) {
+  if (!call.attended) {
+    return roundedMinutes(elapsedMinutes(call.start, call.end));
+  }
+
+  const actualMinutes = roundedMinutes(
+    call.onStart && call.onEnd
+      ? elapsedMinutes(call.onStart, call.onEnd)
+      : elapsedMinutes(call.start, call.end)
+  );
+
+  if (!firstAttendedCall(call)) {
+    return actualMinutes;
+  }
+
+  return Math.max(actualMinutes, isWeekend(call.date) ? 240 : 60);
+}
+
+function showPage(name) {
+  ["clock", "start", "finish", "entries", "stats"].forEach((page) => {
+    $(`${page}Page`).classList.toggle("hidden", page !== name);
+  });
+
+  document.querySelectorAll("nav button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.page === name);
+  });
+
+  if (name === "entries") {
+    renderEntries();
+  }
+
+  if (name === "stats") {
+    renderStats();
+  }
+}
+
+function populateVenues(id) {
+  $(id).innerHTML =
+    '<option value="">Choose a venue</option>' +
+    VENUES.map((venue) => `<option>${escapeHtml(venue)}</option>`).join("");
+}
+
+function updateClock() {
+  const date = new Date();
+
+  $("clock").textContent = date.toLocaleTimeString("en-AU", {
+    hour: "numeric",
+    minute: "2-digit"
+  });
+
+  $("today").textContent = date.toLocaleDateString("en-AU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+}
+
+function renderHome() {
+  const active = db.active;
+
+  if (!active) {
+    $("clockTitle").textContent = "Ready for a call";
+    $("clockButton").textContent = "Clock in";
+    $("clockButton").classList.remove("out");
+    $("active").classList.add("hidden");
+    return;
+  }
+
+  $("clockTitle").textContent = "Call in progress";
+  $("clockButton").textContent = "Clock out";
+  $("clockButton").classList.add("out");
+
+  $("active").innerHTML = `
+    <b>${escapeHtml(active.caller)} · ${escapeHtml(active.venue)}</b>
+    <p>Started at ${timeText(active.start)}</p>
+    <p>${escapeHtml(active.problem)}</p>
+  `;
+
+  $("active").classList.remove("hidden");
+}
+
+function renderEntries() {
+  const calls = orderedCalls(db.calls);
+
+  const remoteTotal = calls
+    .filter((call) => !call.attended)
+    .reduce((total, call) => total + paidMinutes(call), 0);
+
+  const attendedTotal = calls
+    .filter((call) => call.attended)
+    .reduce((total, call) => total + paidMinutes(call), 0);
+
+  $("callCount").textContent = calls.length;
+  $("remoteTime").textContent = durationText(remoteTotal);
+  $("attendedTime").textContent = durationText(attendedTotal);
+  $("totalTime").textContent = durationText(remoteTotal + attendedTotal);
+
+  if (!calls.length) {
+    $("entryList").innerHTML = "<p>No entries yet.</p>";
+    return;
+  }
+
+  const byDate = calls.reduce((groups, call) => {
+    if (!groups[call.date]) {
+      groups[call.date] = [];
+    }
+
+    groups[call.date].push(call);
+    return groups;
+  }, {});
+
+  $("entryList").innerHTML = Object.entries(byDate)
+    .map(([date, entries]) => {
+      const rows = entries
+        .map((call) => {
+          return `
+            <article class="entry ${call.attended ? "attended" : ""}">
+              <div class="cell">
+                <div class="top">${timeText(call.start)}</div>
+                <div class="bottom">${timeText(call.end)}</div>
+              </div>
+
+              <div class="cell">
+                <div class="top">${escapeHtml(call.caller)}</div>
+                <div class="bottom">${escapeHtml(call.venue)}</div>
+              </div>
+
+              <div class="cell">
+                <div class="top">${escapeHtml(call.problem)}</div>
+                <div class="bottom">${escapeHtml(call.resolution)}</div>
+              </div>
+
+              <div class="cell total">
+                ${durationText(paidMinutes(call))}
+              </div>
+
+              <div class="actions">
+                <button type="button" onclick="editCall('${call.id}')">EDIT</button>
+                <button type="button" onclick="deleteCall('${call.id}')">DELETE</button>
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+
+      return `
+        <section class="date-group">
+          <div class="date-heading">${displayDate(date)}</div>
+
+          <div class="entry-head">
+            <div>TIME</div>
+            <div>NAME</div>
+            <div>PROBLEM / RESOLUTION</div>
+            <div>TOTAL</div>
+            <div>ACTIONS</div>
+          </div>
+
+          ${rows}
+        </section>
+      `;
+    })
+    .join("");
+}
+
+function renderChart(id, data) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+
+  if (!total) {
+    $(id).innerHTML = "<p>No calls recorded yet.</p>";
+    return;
+  }
+
+  const radius = 53;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  const segments = data
+    .map((item) => {
+      const length = (circumference * item.value) / total;
+
+      const output = `
+        <circle
+          cx="78"
+          cy="78"
+          r="${radius}"
+          fill="none"
+          stroke="${item.color}"
+          stroke-width="30"
+          stroke-dasharray="${length} ${circumference - length}"
+          stroke-dashoffset="${-offset}"
+          transform="rotate(-90 78 78)"
+        />
+      `;
+
+      offset += length;
+      return output;
+    })
+    .join("");
+
+  const legend = data
+    .map((item) => {
+      const percentage = Math.round((item.value / total) * 100);
+
+      return `
+        <div>
+          <span>
+            <i class="dot" style="background:${item.color}"></i>
+            ${escapeHtml(item.name)}
+          </span>
+          <b>${item.value} (${percentage}%)</b>
+        </div>
+      `;
+    })
+    .join("");
+
+  $(id).innerHTML = `
+    <div class="chart">
+      <svg class="donut" viewBox="0 0 156 156">
+        <circle
+          cx="78"
+          cy="78"
+          r="53"
+          fill="none"
+          stroke="#293957"
+          stroke-width="30"
+        />
+
+        ${segments}
+
+        <text x="78" y="73" text-anchor="middle" fill="white" font-size="25">
+          ${total}
+        </text>
+
+        <text x="78" y="94" text-anchor="middle" fill="#aebbd3" font-size="12">
+          calls
+        </text>
+      </svg>
+
+      <div class="legend">
+        ${legend}
+      </div>
+    </div>
+  `;
+}
+
+function renderStats() {
+  const timeBands = [
+    { name: "00:00–06:00", value: 0, color: "#6cc8ff" },
+    { name: "06:00–09:00", value: 0, color: "#61dda0" },
+    { name: "17:00–24:00", value: 0, color: "#ffd36e" },
+    { name: "Other times", value: 0, color: "#aa8cff" }
+  ];
+
+  const venues = {};
+
+  db.calls.forEach((call) => {
+    const time = timeMinutes(call.start);
+
+    if (time < 360) {
+      timeBands[0].value++;
+    } else if (time < 540) {
+      timeBands[1].value++;
+    } else if (time >= 1020) {
+      timeBands[2].value++;
+    } else {
+      timeBands[3].value++;
+    }
+
+    venues[call.venue] = (venues[call.venue] || 0) + 1;
+  });
+
+  $("statsText").textContent = db.calls.length
+    ? `${db.calls.length} completed calls analysed.`
+    : "No completed calls recorded yet.";
+
+  renderChart("timeChart", timeBands);
+
+  const colours = [
+    "#61dda0",
+    "#56a9ff",
+    "#ffd36e",
+    "#aa8cff",
+    "#ff8c7a",
+    "#70d6c0"
+  ];
+
+  const venueData = Object.entries(venues).map(([name, value], index) => ({
+    name,
+    value,
+    color: colours[index % colours.length]
+  }));
+
+  renderChart("venueChart", venueData);
+}
+
+function beginStart() {
+  if (db.active) {
+    beginFinish();
+    return;
+  }
+
+  $("startForm").reset();
+  populateVenues("venue");
+  showPage("start");
+}
+
+function saveStart(event) {
+  event.preventDefault();
+
+  const caller = $("caller").value.trim();
+  const venue = $("venue").value;
+  const problem = $("problem").value.trim();
+
+  if (!caller || !venue || !problem) {
+    return;
+  }
+
+  db.active = {
+    id: crypto.randomUUID(),
+    date: dateISO(),
+    start: nowTime(),
+    caller,
+    venue,
+    problem
+  };
+
+  save();
+  renderHome();
+  showPage("clock");
+}
+
+function beginFinish() {
+  if (!db.active) {
+    return;
+  }
+
+  $("finishForm").reset();
+  updateFinishScreen();
+  showPage("finish");
+}
+
+function updateFinishScreen() {
+  const active = db.active;
+
+  $("finishInfo").textContent =
+    `Started at ${timeText(active.start)}. If you finish now, this records as ` +
+    `${durationText(roundedMinutes(elapsedMinutes(active.start, nowTime())))}.`;
+
+  const isAttended = $("attended").checked;
+
+  $("onsite").classList.toggle("hidden", !isAttended);
+  $("minimum").classList.toggle("hidden", !isAttended);
+
+  if (isAttended) {
+    const firstToday = !db.calls.some(
+      (call) => call.attended && call.date === active.date
+    );
+
+    $("minimum").textContent = firstToday
+      ? `First attended call today: ${isWeekend(active.date) ? 4 : 1} hour minimum applies.`
+      : "Additional attended call uses rounded onsite time.";
+  }
+}
+
+function saveFinish(event) {
+  event.preventDefault();
+
+  const resolution = $("resolution").value.trim();
+  const onsiteStart = $("onsiteStart").value;
+  const onsiteEnd = $("onsiteEnd").value;
+
+  if (!resolution) {
+    return;
+  }
+
+  if ((onsiteStart && !onsiteEnd) || (!onsiteStart && onsiteEnd)) {
+    alert("Enter both onsite times, or leave both blank.");
+    return;
+  }
+
+  db.calls.push({
+    ...db.active,
+    end: nowTime(),
+    resolution,
+    attended: $("attended").checked,
+    onStart: onsiteStart,
+    onEnd: onsiteEnd
+  });
+
+  db.active = null;
+
+  save();
+  renderHome();
+  renderEntries();
+  renderStats();
+  showPage("clock");
+}
+
+window.deleteCall = function deleteCall(id) {
+  if (!confirm("Delete this call?")) {
+    return;
+  }
+
+  db.calls = db.calls.filter((call) => call.id !== id);
+
+  save();
+  renderEntries();
+  renderStats();
+};
+
+window.editCall = function editCall() {
+  alert("Edit will be restored after the new Entries layout is confirmed.");
+};
+
+function backup() {
+  const blob = new Blob([JSON.stringify(db, null, 2)], {
+    type: "application/json"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "On_Call_Backup.json";
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+async function restore(file) {
+  if (!file) {
+    return;
+  }
+
+  try {
+    const restored = JSON.parse(await file.text());
+
+    if (!Array.isArray(restored.calls)) {
+      throw new Error("Invalid saved copy.");
+    }
+
+    db = restored;
+
+    $("employee").value = db.employee || "Brendan T";
+    $("weekEnding").value = db.week || "";
+
+    save();
+    renderHome();
+    renderEntries();
+    renderStats();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function initialise() {
+  load();
+
+  $("employee").value = db.employee;
+  $("weekEnding").value = db.week;
+
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  renderHome();
+  renderEntries();
+  renderStats();
+
+  document.querySelectorAll("nav button").forEach((button) => {
+    button.addEventListener("click", () => showPage(button.dataset.page));
+  });
+
+  $("refresh").addEventListener("click", () => location.reload());
+
+  $("clockButton").addEventListener("click", beginStart);
+  $("startForm").addEventListener("submit", saveStart);
+  $("finishForm").addEventListener("submit", saveFinish);
+  $("attended").addEventListener("change", updateFinishScreen);
+
+  document.querySelectorAll(".back").forEach((button) => {
+    button.addEventListener("click", () => showPage(button.dataset.go));
+  });
+
+  $("employee").addEventListener("change", () => {
+    db.employee = $("employee").value;
+    save();
+  });
+
+  $("weekEnding").addEventListener("change", () => {
+    db.week = $("weekEnding").value;
+    save();
+  });
+
+  ["saveCopy", "saveCopy2"].forEach((id) => {
+    $(id).addEventListener("click", backup);
+  });
+
+  ["restoreCopy", "restoreCopy2"].forEach((id) => {
+    $(id).addEventListener("click", () => $("restoreFile").click());
+  });
+
+  $("restoreFile").addEventListener("change", (event) => {
+    restore(event.target.files[0]);
+  });
+
+  $("deleteAll").addEventListener("click", () => {
+    if (!confirm("Delete all entries?")) {
+      return;
+    }
+
+    db.calls = [];
+    save();
+    renderEntries();
+    renderStats();
+  });
+}
+
+try {
+  initialise();
+} catch (error) {
+  $("error").textContent = error.message;
+  $("error").classList.remove("hidden");
+}
