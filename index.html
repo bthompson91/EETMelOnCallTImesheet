@@ -4,40 +4,46 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>On Call Log</title>
+  <title>On Call Timesheet</title>
 
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <style>
     :root {
       color-scheme: dark;
-      --bg: #0b1020;
-      --panel: #151d31;
+      --bg: #090d18;
+      --panel: #151c2d;
       --panel-2: #1c2740;
-      --line: #2c3a59;
-      --text: #f7f8fc;
-      --muted: #a9b4cb;
-      --accent: #54d18b;
-      --accent-2: #3fa7ff;
-      --danger: #ff6b6b;
-      --warning: #ffd166;
-      --radius: 16px;
-      --shadow: 0 12px 28px rgb(0 0 0 / 0.25);
+      --field: #0e1424;
+      --line: #2d3a58;
+      --text: #f8faff;
+      --muted: #aeb9d1;
+      --green: #5ce29b;
+      --blue: #51a9ff;
+      --yellow: #ffd166;
+      --red: #ff7b7b;
+      --radius: 17px;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
       min-width: 320px;
+      min-height: 100vh;
       background:
-        radial-gradient(circle at top right, #172c54 0, transparent 32rem),
+        radial-gradient(circle at 100% 0%, #1d365d 0, transparent 32rem),
         var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    button, input, textarea, select {
+    button,
+    input,
+    textarea,
+    select {
       font: inherit;
     }
 
@@ -46,37 +52,41 @@
     }
 
     .app {
-      width: min(1120px, 100%);
+      width: min(950px, 100%);
       margin: 0 auto;
-      padding: 18px max(16px, env(safe-area-inset-right)) 42px max(16px, env(safe-area-inset-left));
+      padding: 18px max(16px, env(safe-area-inset-right)) 46px max(16px, env(safe-area-inset-left));
     }
 
     header {
       display: flex;
-      gap: 16px;
-      justify-content: space-between;
+      gap: 14px;
       align-items: flex-start;
-      margin: 10px 0 18px;
+      justify-content: space-between;
+      margin: 8px 0 18px;
     }
 
-    h1, h2, h3, p {
+    h1,
+    h2,
+    h3,
+    p {
       margin-top: 0;
     }
 
     h1 {
-      margin-bottom: 6px;
-      font-size: clamp(1.65rem, 4vw, 2.3rem);
+      margin-bottom: 5px;
+      font-size: clamp(1.65rem, 6vw, 2.25rem);
+      letter-spacing: -0.03em;
     }
 
     h2 {
       margin-bottom: 14px;
-      font-size: 1.15rem;
+      font-size: 1.12rem;
     }
 
     .subtle,
     .hint,
-    .meta,
-    .empty {
+    .empty,
+    .meta {
       color: var(--muted);
     }
 
@@ -85,29 +95,111 @@
       line-height: 1.4;
     }
 
-    .status {
+    .save-status {
       flex: 0 0 auto;
-      border: 1px solid var(--line);
-      background: rgb(21 29 49 / 0.8);
+      border: 1px solid rgb(92 226 155 / 0.45);
       border-radius: 999px;
+      color: #c8f9dd;
+      background: rgb(92 226 155 / 0.1);
       padding: 8px 11px;
-      color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       white-space: nowrap;
     }
 
-    .status.ok {
-      color: #b7f7d1;
-      border-color: rgb(84 209 139 / 0.5);
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      background: rgb(12 17 31 / 0.82);
+      border-radius: 14px;
+      margin-bottom: 16px;
+    }
+
+    .tab-button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .tab-button.active {
+      color: #071d11;
+      background: var(--green);
+    }
+
+    .tab-panel[hidden] {
+      display: none;
     }
 
     .card {
-      background: rgb(21 29 49 / 0.94);
+      background: rgb(21 28 45 / 0.95);
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 18px;
+      padding: 17px;
       margin-bottom: 16px;
+      box-shadow: 0 14px 30px rgb(0 0 0 / 0.18);
+    }
+
+    .clock-card {
+      text-align: center;
+      padding: 27px 18px;
+    }
+
+    .clock-time {
+      font-size: clamp(2.8rem, 14vw, 5.4rem);
+      font-weight: 850;
+      line-height: 1;
+      letter-spacing: -0.07em;
+      margin: 12px 0 8px;
+    }
+
+    .clock-date {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 23px;
+    }
+
+    .clock-button {
+      width: min(480px, 100%);
+      min-height: 80px;
+      border: 0;
+      border-radius: 17px;
+      padding: 18px;
+      color: #072114;
+      background: var(--green);
+      font-size: 1.35rem;
+      font-weight: 900;
+      box-shadow: 0 9px 22px rgb(92 226 155 / 0.22);
+    }
+
+    .clock-button.clock-out {
+      color: #2b1d00;
+      background: var(--yellow);
+      box-shadow: 0 9px 22px rgb(255 209 102 / 0.18);
+    }
+
+    .active-call {
+      margin: 17px auto 0;
+      width: min(550px, 100%);
+      text-align: left;
+      border: 1px solid rgb(255 209 102 / 0.45);
+      background: rgb(255 209 102 / 0.09);
+      border-radius: 13px;
+      padding: 13px;
+    }
+
+    .active-call strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .active-call p {
+      margin: 6px 0 0;
+      line-height: 1.4;
     }
 
     .grid {
@@ -122,68 +214,83 @@
       gap: 7px;
     }
 
-    .field.small {
-      grid-column: span 6;
-    }
+    @media (min-width: 680px) {
+      .field.half {
+        grid-column: span 6;
+      }
 
-    @media (min-width: 700px) {
-      .field.third { grid-column: span 4; }
-      .field.half { grid-column: span 6; }
-      .field.two-thirds { grid-column: span 8; }
-      .field.small { grid-column: span 3; }
+      .field.third {
+        grid-column: span 4;
+      }
     }
 
     label {
-      color: #dbe4fa;
-      font-size: 0.88rem;
-      font-weight: 650;
+      color: #dce5f8;
+      font-size: 0.87rem;
+      font-weight: 750;
     }
 
-    input, textarea, select {
+    input,
+    textarea,
+    select {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 11px;
-      background: #0e1527;
-      color: var(--text);
-      padding: 12px;
       outline: none;
+      padding: 12px;
+      background: var(--field);
+      color: var(--text);
     }
 
-    input:focus, textarea:focus, select:focus {
-      border-color: var(--accent-2);
-      box-shadow: 0 0 0 3px rgb(63 167 255 / 0.16);
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgb(81 169 255 / 0.16);
     }
 
     textarea {
-      min-height: 92px;
+      min-height: 100px;
       resize: vertical;
-      line-height: 1.35;
+      line-height: 1.4;
     }
 
     .checkline {
+      min-height: 50px;
       display: flex;
-      gap: 11px;
       align-items: center;
-      min-height: 48px;
-      padding: 0 12px;
+      gap: 11px;
+      padding: 10px 12px;
       border: 1px solid var(--line);
       border-radius: 11px;
-      background: #0e1527;
+      background: var(--field);
     }
 
     .checkline input {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--accent);
+      width: 21px;
+      height: 21px;
+      accent-color: var(--green);
     }
 
     .checkline label {
       font-size: 0.98rem;
-      font-weight: 600;
     }
 
-    .onsite-fields[hidden] {
-      display: none;
+    .hint {
+      margin: 2px 0 0;
+      line-height: 1.4;
+      font-size: 0.84rem;
+    }
+
+    .notice {
+      margin-top: 12px;
+      border: 1px solid rgb(255 209 102 / 0.35);
+      border-radius: 11px;
+      padding: 11px 12px;
+      color: #ffe7a7;
+      background: rgb(255 209 102 / 0.1);
+      line-height: 1.4;
+      font-size: 0.88rem;
     }
 
     .actions {
@@ -193,59 +300,49 @@
       margin-top: 16px;
     }
 
-    button {
+    .button {
       border: 1px solid transparent;
       border-radius: 11px;
       padding: 11px 14px;
       color: var(--text);
       background: var(--panel-2);
-      font-weight: 700;
+      font-weight: 800;
     }
 
-    button:hover {
-      filter: brightness(1.13);
+    .button:hover,
+    .clock-button:hover,
+    .tab-button:hover {
+      filter: brightness(1.1);
     }
 
-    button.primary {
-      color: #072515;
-      background: var(--accent);
+    .button.primary {
+      color: #072114;
+      background: var(--green);
     }
 
-    button.danger {
-      background: transparent;
-      color: #ffb6b6;
-      border-color: rgb(255 107 107 / 0.55);
-    }
-
-    button.secondary {
+    .button.secondary {
       border-color: var(--line);
       background: #121a2c;
     }
 
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: end;
+    .button.danger {
+      color: #ffbaba;
+      background: transparent;
+      border-color: rgb(255 123 123 / 0.58);
     }
 
-    .toolbar .field {
-      flex: 1 1 215px;
-      margin: 0;
-    }
-
-    .toolbar button {
-      flex: 0 0 auto;
+    .file-input {
+      display: none;
     }
 
     .summary {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      margin: 15px 0 0;
+      margin: 14px 0;
     }
 
-    @media (min-width: 700px) {
+    @media (min-width: 680px) {
       .summary {
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
@@ -253,20 +350,20 @@
 
     .stat {
       border: 1px solid var(--line);
-      background: #0e1527;
       border-radius: 12px;
       padding: 12px;
-    }
-
-    .stat strong {
-      display: block;
-      font-size: 1.25rem;
-      margin-top: 4px;
+      background: var(--field);
     }
 
     .stat span {
       color: var(--muted);
       font-size: 0.78rem;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 1.24rem;
     }
 
     .entries {
@@ -276,25 +373,25 @@
 
     .entry {
       border: 1px solid var(--line);
-      border-left: 5px solid var(--accent-2);
-      background: #0e1527;
-      border-radius: 12px;
+      border-left: 5px solid var(--blue);
+      border-radius: 13px;
       padding: 14px;
+      background: var(--field);
     }
 
     .entry.attended {
-      border-left-color: var(--warning);
+      border-left-color: var(--yellow);
     }
 
     .entry-top {
       display: flex;
-      gap: 10px;
-      align-items: flex-start;
       justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
     }
 
     .entry-title {
-      font-weight: 800;
+      font-weight: 850;
       line-height: 1.35;
     }
 
@@ -305,7 +402,7 @@
 
     .entry p {
       margin: 9px 0 0;
-      line-height: 1.4;
+      line-height: 1.42;
       white-space: pre-wrap;
     }
 
@@ -313,27 +410,30 @@
       margin-top: 12px;
       display: flex;
       gap: 8px;
-      flex-wrap: wrap;
       align-items: center;
+      flex-wrap: wrap;
     }
 
     .pill {
-      padding: 5px 8px;
       border-radius: 999px;
-      background: #1b2947;
-      color: #cfdcf7;
-      font-size: 0.78rem;
-      font-weight: 700;
+      padding: 5px 8px;
+      color: #d9e7ff;
+      background: #20304e;
+      font-size: 0.77rem;
+      font-weight: 800;
     }
 
     .pill.attended {
+      color: #ffebae;
       background: rgb(255 209 102 / 0.16);
-      color: #ffe7a5;
     }
 
-    .entry-footer button {
-      padding: 6px 9px;
-      font-size: 0.79rem;
+    .entry-footer .button {
+      padding: 7px 9px;
+      font-size: 0.8rem;
+    }
+
+    .entry-footer .button:first-of-type {
       margin-left: auto;
     }
 
@@ -341,39 +441,13 @@
       display: none !important;
     }
 
-    .notice {
-      margin: 12px 0 0;
-      border-radius: 10px;
-      padding: 11px 12px;
-      background: rgb(255 209 102 / 0.12);
-      color: #ffe6a0;
-      border: 1px solid rgb(255 209 102 / 0.35);
-      line-height: 1.4;
-      font-size: 0.9rem;
-    }
-
-    .danger-note {
-      background: rgb(255 107 107 / 0.1);
-      color: #ffc1c1;
-      border-color: rgb(255 107 107 / 0.35);
-    }
-
-    .file-input {
-      display: none;
-    }
-
-    @media (max-width: 560px) {
+    @media (max-width: 540px) {
       header {
-        align-items: stretch;
         flex-direction: column;
       }
 
-      .status {
+      .save-status {
         align-self: flex-start;
-      }
-
-      .card {
-        padding: 15px;
       }
     }
   </style>
@@ -383,157 +457,287 @@
   <main class="app">
     <header>
       <div>
-        <h1>On Call Log</h1>
-        <p class="subtle">Local-only on-call timesheet logger. Your entries stay in this browser until you export or back them up.</p>
+        <h1>On Call Timesheet</h1>
+        <p class="subtle">Clock in when a call begins, then clock out when it is finished.</p>
       </div>
-      <div id="saveStatus" class="status">Loading…</div>
+      <div id="saveStatus" class="save-status">Saved on this device</div>
     </header>
 
-    <section class="card">
-      <h2>Week and employee</h2>
+    <nav class="tabs" aria-label="App sections">
+      <button class="tab-button active" type="button" data-tab="clock">Clock</button>
+      <button class="tab-button" type="button" data-tab="entries">Entries</button>
+    </nav>
 
-      <div class="grid">
-        <div class="field half">
-          <label for="employeeName">On-call employee</label>
-          <input id="employeeName" type="text" value="Brendan T" autocomplete="name">
-        </div>
+    <section id="clockPanel" class="tab-panel">
+      <section class="card clock-card">
+        <h2 id="clockHeading">Ready for a call</h2>
+        <div id="clockTime" class="clock-time">--:--</div>
+        <div id="clockDate" class="clock-date">Loading date…</div>
 
-        <div class="field half">
-          <label for="weekEnding">Week ending</label>
-          <input id="weekEnding" type="date">
-        </div>
-      </div>
+        <button id="clockButton" class="clock-button" type="button">Clock in</button>
 
-      <p class="hint">The weekly settings are saved with this device and used in the Excel export.</p>
-    </section>
+        <div id="activeCallDisplay" class="active-call hidden"></div>
+      </section>
 
-    <section class="card">
-      <h2 id="formTitle">Log call</h2>
-
-      <form id="callForm">
-        <input id="editId" type="hidden">
+      <section class="card">
+        <h2>Weekly details</h2>
 
         <div class="grid">
-          <div class="field third">
-            <label for="callDate">Date</label>
-            <input id="callDate" type="date" required>
-          </div>
-
-          <div class="field third">
-            <label for="callStart">Call start</label>
-            <input id="callStart" type="time" step="900" required>
-          </div>
-
-          <div class="field third">
-            <label for="callEnd">Call end</label>
-            <input id="callEnd" type="time" step="900" required>
+          <div class="field half">
+            <label for="employeeName">On-call employee</label>
+            <input id="employeeName" type="text" value="Brendan T" autocomplete="name">
           </div>
 
           <div class="field half">
-            <label for="caller">Caller name</label>
-            <input id="caller" type="text" placeholder="e.g. Sam Tyson">
-          </div>
-
-          <div class="field half">
-            <label for="venue">Venue or venues</label>
-            <input id="venue" type="text" list="venueList" placeholder="Search or type venue" required>
-            <datalist id="venueList"></datalist>
-          </div>
-
-          <div class="field half">
-            <label for="details">Call details / problem</label>
-            <textarea id="details" placeholder="What happened?" required></textarea>
-          </div>
-
-          <div class="field half">
-            <label for="resolution">Resolution</label>
-            <textarea id="resolution" placeholder="What did you do or advise?"></textarea>
-          </div>
-
-          <div class="field half">
-            <div class="checkline">
-              <input id="attended" type="checkbox">
-              <label for="attended">Attended onsite</label>
-            </div>
-            <span class="hint">Unchecked by default. Non-attended time goes to the template’s non-attended minutes column.</span>
-          </div>
-
-          <div id="onsiteFields" class="onsite-fields field half" hidden>
-            <div class="grid">
-              <div class="field small">
-                <label for="onsiteStart">Onsite start</label>
-                <input id="onsiteStart" type="time" step="900">
-              </div>
-
-              <div class="field small">
-                <label for="onsiteEnd">Onsite finish</label>
-                <input id="onsiteEnd" type="time" step="900">
-              </div>
-            </div>
+            <label for="weekEnding">Week ending</label>
+            <input id="weekEnding" type="date">
           </div>
         </div>
 
-        <div id="attendedHelp" class="notice hidden"></div>
+        <p class="hint">These details are included when you export your weekly Excel sheet.</p>
+      </section>
+
+      <section class="card">
+        <h2>Keep your records safe</h2>
+        <p class="subtle">Your calls are stored on this device. Export the Excel sheet each week, and use Save a copy before changing phones or clearing browser data.</p>
 
         <div class="actions">
-          <button class="primary" type="submit">Save call</button>
-          <button id="clearForm" class="secondary" type="button">Clear form</button>
+          <button id="exportExcelClock" class="button primary" type="button">Export Excel</button>
+          <button id="saveCopyClock" class="button secondary" type="button">Save a copy</button>
+          <button id="restoreCopyClock" class="button secondary" type="button">Restore saved copy</button>
+        </div>
+      </section>
+    </section>
+
+    <section id="entriesPanel" class="tab-panel" hidden>
+      <section class="card">
+        <h2>All entries</h2>
+
+        <div class="grid">
+          <div class="field half">
+            <label for="filterDate">Show calls for one date</label>
+            <input id="filterDate" type="date">
+          </div>
+
+          <div class="field half">
+            <label>&nbsp;</label>
+            <button id="showAll" class="button secondary" type="button">Show all calls</button>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="stat">
+            <span>Calls shown</span>
+            <strong id="callsCount">0</strong>
+          </div>
+          <div class="stat">
+            <span>Remote minutes</span>
+            <strong id="nonAttendedTotal">0</strong>
+          </div>
+          <div class="stat">
+            <span>Attended minutes</span>
+            <strong id="attendedTotal">0</strong>
+          </div>
+          <div class="stat">
+            <span>Paid hours shown</span>
+            <strong id="paidHours">0.00</strong>
+          </div>
+        </div>
+
+        <div id="entryList" class="entries"></div>
+
+        <div class="actions">
+          <button id="exportExcelEntries" class="button primary" type="button">Export Excel</button>
+          <button id="saveCopyEntries" class="button secondary" type="button">Save a copy</button>
+          <button id="restoreCopyEntries" class="button secondary" type="button">Restore saved copy</button>
+          <button id="deleteAll" class="button danger" type="button">Delete all entries</button>
+        </div>
+      </section>
+
+      <section id="editCard" class="card hidden">
+        <h2>Edit entry</h2>
+
+        <form id="editForm">
+          <input id="editId" type="hidden">
+
+          <div class="grid">
+            <div class="field third">
+              <label for="editDate">Date</label>
+              <input id="editDate" type="date" required>
+            </div>
+
+            <div class="field third">
+              <label for="editStart">Call start</label>
+              <input id="editStart" type="time" step="60" required>
+            </div>
+
+            <div class="field third">
+              <label for="editEnd">Call finish</label>
+              <input id="editEnd" type="time" step="60" required>
+            </div>
+
+            <div class="field half">
+              <label for="editCaller">Caller name</label>
+              <input id="editCaller" type="text">
+            </div>
+
+            <div class="field half">
+              <label for="editVenue">Venue</label>
+              <select id="editVenue" required></select>
+            </div>
+
+            <div class="field half">
+              <label for="editProblem">Problem / call details</label>
+              <textarea id="editProblem" required></textarea>
+            </div>
+
+            <div class="field half">
+              <label for="editResolution">Resolution</label>
+              <textarea id="editResolution"></textarea>
+            </div>
+
+            <div class="field half">
+              <div class="checkline">
+                <input id="editAttended" type="checkbox">
+                <label for="editAttended">Attended onsite</label>
+              </div>
+            </div>
+
+            <div id="editOnsiteFields" class="field half hidden">
+              <div class="grid">
+                <div class="field half">
+                  <label for="editOnsiteStart">Onsite start</label>
+                  <input id="editOnsiteStart" type="time" step="60">
+                </div>
+
+                <div class="field half">
+                  <label for="editOnsiteEnd">Onsite finish</label>
+                  <input id="editOnsiteEnd" type="time" step="60">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="editAttendedNotice" class="notice hidden"></div>
+
+          <div class="actions">
+            <button class="button primary" type="submit">Save changes</button>
+            <button id="cancelEdit" class="button secondary" type="button">Cancel</button>
+          </div>
+        </form>
+      </section>
+    </section>
+
+    <input id="restoreInput" class="file-input" type="file" accept=".json,application/json">
+  </main>
+
+  <div id="clockInDialog" class="dialog-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="clockInTitle">
+    <section class="dialog">
+      <h2 id="clockInTitle">Start a call</h2>
+      <p class="hint">The time starts when you press Start call.</p>
+
+      <form id="clockInForm">
+        <div class="field">
+          <label for="clockInCaller">Caller name</label>
+          <input id="clockInCaller" type="text" autocomplete="name" placeholder="e.g. Sam Tyson" required>
+        </div>
+
+        <div class="field">
+          <label for="clockInVenue">Venue</label>
+          <select id="clockInVenue" required></select>
+        </div>
+
+        <div class="field">
+          <label for="clockInProblem">Problem / call details</label>
+          <textarea id="clockInProblem" placeholder="What is happening?" required></textarea>
+        </div>
+
+        <div class="checkline">
+          <input id="clockInAttended" type="checkbox">
+          <label for="clockInAttended">Attended onsite</label>
+        </div>
+
+        <div id="clockInAttendedNotice" class="notice hidden"></div>
+
+        <div class="actions">
+          <button class="button primary" type="submit">Start call</button>
+          <button id="cancelClockIn" class="button secondary" type="button">Cancel</button>
         </div>
       </form>
     </section>
+  </div>
 
-    <section class="card">
-      <h2>Review and export</h2>
+  <div id="clockOutDialog" class="dialog-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="clockOutTitle">
+    <section class="dialog">
+      <h2 id="clockOutTitle">Finish call</h2>
+      <p id="clockOutSummary" class="hint"></p>
 
-      <div class="toolbar">
+      <form id="clockOutForm">
         <div class="field">
-          <label for="filterDate">Show calls for date</label>
-          <input id="filterDate" type="date">
+          <label for="clockOutResolution">Resolution</label>
+          <textarea id="clockOutResolution" placeholder="What did you do or advise?" required></textarea>
         </div>
 
-        <button id="showAll" class="secondary" type="button">Show whole week</button>
-        <button id="exportExcel" class="primary" type="button">Export Excel</button>
-        <button id="backupJson" class="secondary" type="button">Backup JSON</button>
-        <button id="restoreJson" class="secondary" type="button">Restore JSON</button>
-        <input id="restoreInput" class="file-input" type="file" accept="application/json,.json">
-      </div>
+        <div id="clockOutOnsiteFields" class="hidden">
+          <div class="grid">
+            <div class="field half">
+              <label for="clockOutOnsiteStart">Onsite start</label>
+              <input id="clockOutOnsiteStart" type="time" step="60">
+            </div>
 
-      <div class="summary">
-        <div class="stat">
-          <span>Calls shown</span>
-          <strong id="callsCount">0</strong>
+            <div class="field half">
+              <label for="clockOutOnsiteEnd">Onsite finish</label>
+              <input id="clockOutOnsiteEnd" type="time" step="60">
+            </div>
+          </div>
+          <p class="hint">Leave these blank if the full call duration was your onsite time.</p>
         </div>
-        <div class="stat">
-          <span>Non-attended minutes</span>
-          <strong id="nonAttendedTotal">0</strong>
-        </div>
-        <div class="stat">
-          <span>Attended minutes</span>
-          <strong id="attendedTotal">0</strong>
-        </div>
-        <div class="stat">
-          <span>Paid hours shown</span>
-          <strong id="paidHours">0.00</strong>
-        </div>
-      </div>
 
-      <div id="entryList" class="entries" style="margin-top:16px"></div>
+        <div id="clockOutAttendedNotice" class="notice hidden"></div>
+
+        <div class="actions">
+          <button class="button primary" type="submit">Save finished call</button>
+          <button id="cancelClockOut" class="button secondary" type="button">Keep call running</button>
+        </div>
+      </form>
     </section>
+  </div>
 
-    <section class="card">
-      <h2>Data safety</h2>
-      <p class="subtle">
-        This page stores data in browser local storage. Export your Excel sheet every week and download a JSON backup before changing phones, clearing browser data, or relying on a second device.
-      </p>
-      <div class="actions">
-        <button id="clearAll" class="danger" type="button">Delete all local calls</button>
-      </div>
-    </section>
-  </main>
+  <style>
+    .dialog-backdrop {
+      position: fixed;
+      z-index: 100;
+      inset: 0;
+      display: grid;
+      place-items: end center;
+      padding: 16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      background: rgb(0 0 0 / 0.68);
+      backdrop-filter: blur(4px);
+    }
+
+    .dialog {
+      width: min(620px, 100%);
+      max-height: calc(100dvh - 32px);
+      overflow: auto;
+      border: 1px solid #3a4b70;
+      border-radius: 20px;
+      padding: 18px;
+      background: #151c2d;
+      box-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
+    }
+
+    @media (min-width: 680px) {
+      .dialog-backdrop {
+        place-items: center;
+      }
+    }
+  </style>
 
   <script>
-    const STORAGE_KEY = "on-call-log-v1";
-    const SETTINGS_KEY = "on-call-log-settings-v1";
+    const STORAGE_KEY = "on-call-clock-timesheet-v2";
+    const SETTINGS_KEY = "on-call-clock-settings-v2";
+    const ACTIVE_CALL_KEY = "on-call-clock-active-v2";
 
     const VENUES = [
       "1 Hotel",
@@ -566,6 +770,7 @@
 
     const state = {
       calls: [],
+      activeCall: null,
       settings: {
         employeeName: "Brendan T",
         weekEnding: ""
@@ -574,54 +779,29 @@
 
     function localISODate(date = new Date()) {
       const offset = date.getTimezoneOffset();
-      return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
+      return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
+    }
+
+    function localTime(date = new Date()) {
+      const offset = date.getTimezoneOffset();
+      return new Date(date.getTime() - offset * 60000).toISOString().slice(11, 16);
     }
 
     function nextSundayISO() {
       const now = new Date();
       const day = now.getDay();
-      const diff = day === 0 ? 0 : 7 - day;
-      now.setDate(now.getDate() + diff);
+      now.setDate(now.getDate() + (day === 0 ? 0 : 7 - day));
       return localISODate(now);
     }
 
-    function roundToQuarterTime(date = new Date()) {
-      const d = new Date(date);
-      d.setSeconds(0, 0);
-      d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15);
-      return d.toTimeString().slice(0, 5);
-    }
-
-    function addMinutesToTime(time, minutes) {
-      if (!time) return "";
-      const [h, m] = time.split(":").map(Number);
-      const total = (h * 60 + m + minutes) % 1440;
-      const hh = String(Math.floor(total / 60)).padStart(2, "0");
-      const mm = String(total % 60).padStart(2, "0");
-      return `${hh}:${mm}`;
-    }
-
-    function timeToMinutes(time) {
-      if (!time) return 0;
-      const [h, m] = time.split(":").map(Number);
-      return h * 60 + m;
-    }
-
-    function elapsedMinutes(start, end) {
-      let result = timeToMinutes(end) - timeToMinutes(start);
-      if (result < 0) result += 1440;
-      return result;
-    }
-
     function dateFromISO(iso) {
-      if (!iso) return new Date();
       const [year, month, day] = iso.split("-").map(Number);
       return new Date(year, month - 1, day);
     }
 
     function displayDate(iso) {
-      if (!iso) return "";
       return dateFromISO(iso).toLocaleDateString("en-AU", {
+        weekday: "short",
         day: "numeric",
         month: "short",
         year: "numeric"
@@ -629,111 +809,35 @@
     }
 
     function excelDate(iso) {
-      if (!iso) return "";
-      const d = dateFromISO(iso);
-      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+      const date = dateFromISO(iso);
+      return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     }
 
     function displayTime(time) {
-      if (!time) return "";
       const [hour, minute] = time.split(":").map(Number);
       const ampm = hour >= 12 ? "PM" : "AM";
-      const h = hour % 12 || 12;
-      return `${h}:${String(minute).padStart(2, "0")} ${ampm}`;
+      return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${ampm}`;
+    }
+
+    function timeToMinutes(time) {
+      const [hour, minute] = time.split(":").map(Number);
+      return hour * 60 + minute;
+    }
+
+    function elapsedMinutes(start, end) {
+      let minutes = timeToMinutes(end) - timeToMinutes(start);
+      if (minutes < 0) minutes += 1440;
+      return minutes;
+    }
+
+    function roundUpToQuarter(minutes) {
+      if (minutes <= 0) return 15;
+      return Math.ceil(minutes / 15) * 15;
     }
 
     function isWeekend(iso) {
       const day = dateFromISO(iso).getDay();
       return day === 0 || day === 6;
-    }
-
-    function firstAttendedForDate(call) {
-      return state.calls
-        .filter(item => item.attended && item.date === call.date)
-        .sort((a, b) => {
-          const timeCompare = a.callStart.localeCompare(b.callStart);
-          return timeCompare || String(a.createdAt).localeCompare(String(b.createdAt));
-        })[0]?.id === call.id;
-    }
-
-    function nonAttendedMinutes(call) {
-      return call.attended ? 0 : elapsedMinutes(call.callStart, call.callEnd);
-    }
-
-    function attendedActualMinutes(call) {
-      if (!call.attended) return 0;
-      if (call.onsiteStart && call.onsiteEnd) {
-        return elapsedMinutes(call.onsiteStart, call.onsiteEnd);
-      }
-      return elapsedMinutes(call.callStart, call.callEnd);
-    }
-
-    function attendedPaidMinutes(call) {
-      if (!call.attended) return 0;
-
-      const actual = attendedActualMinutes(call);
-      if (!firstAttendedForDate(call)) return actual;
-
-      const minimum = isWeekend(call.date) ? 240 : 60;
-      return Math.max(actual, minimum);
-    }
-
-    function attendanceLabel(call) {
-      if (!call.attended) {
-        return `Non-attended · ${nonAttendedMinutes(call)} min`;
-      }
-
-      const actual = attendedActualMinutes(call);
-      const paid = attendedPaidMinutes(call);
-
-      if (firstAttendedForDate(call) && paid > actual) {
-        return `Attended · ${paid} min paid minimum`;
-      }
-
-      return `Attended · ${paid} min`;
-    }
-
-    function setStatus(text, ok = false) {
-      const el = $("saveStatus");
-      el.textContent = text;
-      el.classList.toggle("ok", ok);
-    }
-
-    function save() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.calls));
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
-      setStatus(`Saved locally · ${new Date().toLocaleTimeString("en-AU", {
-        hour: "2-digit",
-        minute: "2-digit"
-      })}`, true);
-    }
-
-    function load() {
-      try {
-        const savedCalls = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        state.calls = Array.isArray(savedCalls) ? savedCalls : [];
-      } catch {
-        state.calls = [];
-      }
-
-      try {
-        const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-        state.settings = {
-          employeeName: savedSettings.employeeName || "Brendan T",
-          weekEnding: savedSettings.weekEnding || nextSundayISO()
-        };
-      } catch {
-        state.settings = {
-          employeeName: "Brendan T",
-          weekEnding: nextSundayISO()
-        };
-      }
-    }
-
-    function populateVenueList() {
-      $("venueList").innerHTML = VENUES
-        .map(venue => `<option value="${escapeHtml(venue)}"></option>`)
-        .join("");
     }
 
     function escapeHtml(value) {
@@ -745,118 +849,185 @@
         .replaceAll("'", "&#039;");
     }
 
-    function syncSettingsFromInputs() {
-      state.settings.employeeName = $("employeeName").value.trim() || "Brendan T";
-      state.settings.weekEnding = $("weekEnding").value || nextSundayISO();
-      save();
+    function setStatus(message) {
+      $("saveStatus").textContent = message;
     }
 
-    function resetForm() {
-      $("callForm").reset();
-      $("editId").value = "";
-      $("formTitle").textContent = "Log call";
+    function saveEverything() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.calls));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
 
-      const now = new Date();
-      const start = roundToQuarterTime(now);
-
-      $("callDate").value = localISODate(now);
-      $("callStart").value = start;
-      $("callEnd").value = addMinutesToTime(start, 15);
-      $("attended").checked = false;
-      $("onsiteStart").value = "";
-      $("onsiteEnd").value = "";
-
-      toggleAttendedFields();
-      updateAttendedHelp();
-    }
-
-    function toggleAttendedFields() {
-      $("onsiteFields").hidden = !$("attended").checked;
-    }
-
-    function currentFormCall() {
-      return {
-        id: $("editId").value || crypto.randomUUID(),
-        date: $("callDate").value,
-        callStart: $("callStart").value,
-        callEnd: $("callEnd").value,
-        caller: $("caller").value.trim(),
-        venue: $("venue").value.trim(),
-        details: $("details").value.trim(),
-        resolution: $("resolution").value.trim(),
-        attended: $("attended").checked,
-        onsiteStart: $("onsiteStart").value,
-        onsiteEnd: $("onsiteEnd").value,
-        createdAt: new Date().toISOString()
-      };
-    }
-
-    function updateAttendedHelp() {
-      const help = $("attendedHelp");
-
-      if (!$("attended").checked || !$("callDate").value) {
-        help.classList.add("hidden");
-        help.textContent = "";
-        return;
-      }
-
-      const draft = currentFormCall();
-      const alreadyHasAttended = state.calls.some(call =>
-        call.attended &&
-        call.date === draft.date &&
-        call.id !== draft.id
-      );
-
-      const minimum = isWeekend(draft.date) ? 240 : 60;
-      const description = isWeekend(draft.date) ? "weekend" : "weekday";
-
-      if (alreadyHasAttended) {
-        help.textContent =
-          "This is an additional attended call on the same day. It will use actual onsite time only; the first attended call of that day receives the daily minimum.";
+      if (state.activeCall) {
+        localStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(state.activeCall));
       } else {
-        help.textContent =
-          `First attended call for this ${description}. Export will claim at least ${minimum} minutes (${minimum / 60} hour${minimum === 60 ? "" : "s"}) in the attended column.`;
+        localStorage.removeItem(ACTIVE_CALL_KEY);
       }
 
-      help.classList.remove("hidden");
+      setStatus("Saved on this device");
+    }
+
+    function loadEverything() {
+      try {
+        state.calls = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        if (!Array.isArray(state.calls)) state.calls = [];
+      } catch {
+        state.calls = [];
+      }
+
+      try {
+        const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+        state.settings.employeeName = savedSettings.employeeName || "Brendan T";
+        state.settings.weekEnding = savedSettings.weekEnding || nextSundayISO();
+      } catch {
+        state.settings.weekEnding = nextSundayISO();
+      }
+
+      try {
+        state.activeCall = JSON.parse(localStorage.getItem(ACTIVE_CALL_KEY) || "null");
+      } catch {
+        state.activeCall = null;
+      }
+    }
+
+    function fillVenueSelect(selectId, includeBlank = true) {
+      const select = $(selectId);
+      select.innerHTML = [
+        includeBlank ? `<option value="">Choose a venue</option>` : "",
+        ...VENUES.map(venue => `<option value="${escapeHtml(venue)}">${escapeHtml(venue)}</option>`)
+      ].join("");
     }
 
     function sortedCalls(calls) {
       return [...calls].sort((a, b) => {
         const dateCompare = a.date.localeCompare(b.date);
         if (dateCompare !== 0) return dateCompare;
+
         const timeCompare = a.callStart.localeCompare(b.callStart);
         if (timeCompare !== 0) return timeCompare;
+
         return String(a.createdAt).localeCompare(String(b.createdAt));
       });
     }
 
-    function filteredCalls() {
+    function firstAttendedForDate(call) {
+      const first = sortedCalls(
+        state.calls.filter(item => item.attended && item.date === call.date)
+      )[0];
+
+      return first?.id === call.id;
+    }
+
+    function remotePaidMinutes(call) {
+      if (call.attended) return 0;
+      return roundUpToQuarter(elapsedMinutes(call.callStart, call.callEnd));
+    }
+
+    function attendedActualMinutes(call) {
+      if (!call.attended) return 0;
+
+      if (call.onsiteStart && call.onsiteEnd) {
+        return roundUpToQuarter(elapsedMinutes(call.onsiteStart, call.onsiteEnd));
+      }
+
+      return roundUpToQuarter(elapsedMinutes(call.callStart, call.callEnd));
+    }
+
+    function attendedPaidMinutes(call) {
+      if (!call.attended) return 0;
+
+      const actual = attendedActualMinutes(call);
+
+      if (!firstAttendedForDate(call)) {
+        return actual;
+      }
+
+      const minimum = isWeekend(call.date) ? 240 : 60;
+      return Math.max(actual, minimum);
+    }
+
+    function entryDurationLabel(call) {
+      if (!call.attended) {
+        return `Remote · ${remotePaidMinutes(call)} min`;
+      }
+
+      const actual = attendedActualMinutes(call);
+      const paid = attendedPaidMinutes(call);
+
+      if (firstAttendedForDate(call) && paid > actual) {
+        return `Attended · ${paid} min minimum`;
+      }
+
+      return `Attended · ${paid} min`;
+    }
+
+    function updateLiveClock() {
+      const now = new Date();
+
+      $("clockTime").textContent = now.toLocaleTimeString("en-AU", {
+        hour: "numeric",
+        minute: "2-digit"
+      });
+
+      $("clockDate").textContent = now.toLocaleDateString("en-AU", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+    }
+
+    function renderClock() {
+      const active = state.activeCall;
+      const button = $("clockButton");
+      const display = $("activeCallDisplay");
+
+      if (!active) {
+        $("clockHeading").textContent = "Ready for a call";
+        button.textContent = "Clock in";
+        button.classList.remove("clock-out");
+        display.classList.add("hidden");
+        display.innerHTML = "";
+        return;
+      }
+
+      $("clockHeading").textContent = "Call in progress";
+      button.textContent = "Clock out";
+      button.classList.add("clock-out");
+
+      display.innerHTML = `
+        <strong>${escapeHtml(active.caller)} · ${escapeHtml(active.venue)}</strong>
+        <p>Started ${escapeHtml(displayDate(active.date))} at ${escapeHtml(displayTime(active.callStart))}</p>
+        <p>${escapeHtml(active.problem)}</p>
+        ${active.attended ? `<p><strong>Attended onsite</strong></p>` : ""}
+      `;
+
+      display.classList.remove("hidden");
+    }
+
+    function callsForDisplay() {
       const filter = $("filterDate").value;
       return sortedCalls(filter ? state.calls.filter(call => call.date === filter) : state.calls);
     }
 
-    function render() {
-      const calls = filteredCalls();
+    function renderEntries() {
+      const calls = callsForDisplay();
       const list = $("entryList");
 
-      $("callsCount").textContent = calls.length;
-      $("nonAttendedTotal").textContent = calls.reduce((sum, call) => sum + nonAttendedMinutes(call), 0);
-      $("attendedTotal").textContent = calls.reduce((sum, call) => sum + attendedPaidMinutes(call), 0);
+      const remoteTotal = calls.reduce((total, call) => total + remotePaidMinutes(call), 0);
+      const attendedTotal = calls.reduce((total, call) => total + attendedPaidMinutes(call), 0);
 
-      const paidMinutes = calls.reduce(
-        (sum, call) => sum + nonAttendedMinutes(call) + attendedPaidMinutes(call),
-        0
-      );
-      $("paidHours").textContent = (paidMinutes / 60).toFixed(2);
+      $("callsCount").textContent = calls.length;
+      $("nonAttendedTotal").textContent = remoteTotal;
+      $("attendedTotal").textContent = attendedTotal;
+      $("paidHours").textContent = ((remoteTotal + attendedTotal) / 60).toFixed(2);
 
       if (!calls.length) {
-        list.innerHTML = `<p class="empty">No calls shown yet.</p>`;
+        list.innerHTML = `<p class="empty">No entries to show.</p>`;
         return;
       }
 
       list.innerHTML = calls.map(call => {
-        const onsite = call.attended && call.onsiteStart && call.onsiteEnd
+        const onsiteText = call.attended && call.onsiteStart && call.onsiteEnd
           ? ` · onsite ${displayTime(call.onsiteStart)}–${displayTime(call.onsiteEnd)}`
           : "";
 
@@ -868,124 +1039,329 @@
                   ${escapeHtml(displayDate(call.date))}
                   <span>· ${escapeHtml(displayTime(call.callStart))}–${escapeHtml(displayTime(call.callEnd))}</span>
                 </div>
-                <div class="meta">${escapeHtml(call.caller || "No caller entered")} · ${escapeHtml(call.venue)}${escapeHtml(onsite)}</div>
+                <div class="meta">${escapeHtml(call.caller)} · ${escapeHtml(call.venue)}${escapeHtml(onsiteText)}</div>
               </div>
             </div>
 
-            <p><strong>Details:</strong> ${escapeHtml(call.details)}</p>
-            ${call.resolution ? `<p><strong>Resolution:</strong> ${escapeHtml(call.resolution)}</p>` : ""}
+            <p><strong>Problem:</strong> ${escapeHtml(call.problem)}</p>
+            <p><strong>Resolution:</strong> ${escapeHtml(call.resolution || "No resolution entered")}</p>
 
             <div class="entry-footer">
-              <span class="pill ${call.attended ? "attended" : ""}">${escapeHtml(attendanceLabel(call))}</span>
-              <button type="button" onclick="editCall('${call.id}')">Edit</button>
-              <button type="button" class="danger" onclick="deleteCall('${call.id}')">Delete</button>
+              <span class="pill ${call.attended ? "attended" : ""}">${escapeHtml(entryDurationLabel(call))}</span>
+              <button class="button secondary" type="button" onclick="editEntry('${call.id}')">Edit</button>
+              <button class="button danger" type="button" onclick="deleteEntry('${call.id}')">Delete</button>
             </div>
           </article>
         `;
       }).join("");
     }
 
-    window.editCall = function(id) {
+    function switchTab(tabName) {
+      const isClock = tabName === "clock";
+
+      $("clockPanel").hidden = !isClock;
+      $("entriesPanel").hidden = isClock;
+
+      document.querySelectorAll(".tab-button").forEach(button => {
+        button.classList.toggle("active", button.dataset.tab === tabName);
+      });
+
+      if (!isClock) renderEntries();
+    }
+
+    function showDialog(id) {
+      $(id).classList.remove("hidden");
+    }
+
+    function hideDialog(id) {
+      $(id).classList.add("hidden");
+    }
+
+    function updateClockInAttendedNotice() {
+      const notice = $("clockInAttendedNotice");
+
+      if (!$("clockInAttended").checked) {
+        notice.classList.add("hidden");
+        return;
+      }
+
+      const today = localISODate();
+      const alreadyAttended = state.calls.some(call => call.attended && call.date === today);
+      const minimum = isWeekend(today) ? 4 : 1;
+
+      notice.textContent = alreadyAttended
+        ? "There is already an attended call logged today. This call will use its rounded onsite time."
+        : `This is the first attended call today. It will claim at least ${minimum} hour${minimum === 1 ? "" : "s"} when exported.`;
+
+      notice.classList.remove("hidden");
+    }
+
+    function updateClockOutDialog() {
+      const active = state.activeCall;
+      if (!active) return;
+
+      const now = new Date();
+      const finishTime = localTime(now);
+      const rawMinutes = elapsedMinutes(active.callStart, finishTime);
+      const roundedMinutes = roundUpToQuarter(rawMinutes);
+
+      $("clockOutSummary").textContent =
+        `Started at ${displayTime(active.callStart)}. If you finish now, this call will be recorded as ${roundedMinutes} minutes.`;
+
+      const onsiteFields = $("clockOutOnsiteFields");
+      const notice = $("clockOutAttendedNotice");
+
+      if (!active.attended) {
+        onsiteFields.classList.add("hidden");
+        notice.classList.add("hidden");
+        return;
+      }
+
+      onsiteFields.classList.remove("hidden");
+
+      const firstForToday = !state.calls.some(call => call.attended && call.date === active.date);
+      const minimum = isWeekend(active.date) ? 240 : 60;
+
+      notice.textContent = firstForToday
+        ? `First attended call today: at least ${minimum} minutes will be entered in the attended column when exported.`
+        : "Additional attended call today: rounded onsite time will be used.";
+
+      notice.classList.remove("hidden");
+    }
+
+    function startClockIn() {
+      if (state.activeCall) {
+        openClockOut();
+        return;
+      }
+
+      $("clockInForm").reset();
+      fillVenueSelect("clockInVenue", true);
+      $("clockInAttended").checked = false;
+      updateClockInAttendedNotice();
+      showDialog("clockInDialog");
+
+      setTimeout(() => $("clockInCaller").focus(), 50);
+    }
+
+    function submitClockIn(event) {
+      event.preventDefault();
+
+      const caller = $("clockInCaller").value.trim();
+      const venue = $("clockInVenue").value;
+      const problem = $("clockInProblem").value.trim();
+
+      if (!caller || !venue || !problem) {
+        alert("Please enter caller name, venue, and problem.");
+        return;
+      }
+
+      const now = new Date();
+
+      state.activeCall = {
+        id: crypto.randomUUID(),
+        date: localISODate(now),
+        callStart: localTime(now),
+        caller,
+        venue,
+        problem,
+        attended: $("clockInAttended").checked,
+        startedAt: now.toISOString()
+      };
+
+      saveEverything();
+      renderClock();
+      hideDialog("clockInDialog");
+    }
+
+    function openClockOut() {
+      if (!state.activeCall) return;
+
+      $("clockOutForm").reset();
+      $("clockOutOnsiteStart").value = "";
+      $("clockOutOnsiteEnd").value = "";
+
+      updateClockOutDialog();
+      showDialog("clockOutDialog");
+
+      setTimeout(() => $("clockOutResolution").focus(), 50);
+    }
+
+    function submitClockOut(event) {
+      event.preventDefault();
+
+      if (!state.activeCall) return;
+
+      const resolution = $("clockOutResolution").value.trim();
+
+      if (!resolution) {
+        alert("Please enter the resolution before finishing the call.");
+        return;
+      }
+
+      const active = state.activeCall;
+      const now = new Date();
+
+      const onsiteStart = $("clockOutOnsiteStart").value;
+      const onsiteEnd = $("clockOutOnsiteEnd").value;
+
+      if ((onsiteStart && !onsiteEnd) || (!onsiteStart && onsiteEnd)) {
+        alert("Enter both onsite times, or leave both blank.");
+        return;
+      }
+
+      const call = {
+        id: active.id,
+        date: active.date,
+        callStart: active.callStart,
+        callEnd: localTime(now),
+        caller: active.caller,
+        venue: active.venue,
+        problem: active.problem,
+        resolution,
+        attended: active.attended,
+        onsiteStart,
+        onsiteEnd,
+        createdAt: active.startedAt,
+        finishedAt: now.toISOString()
+      };
+
+      state.calls.push(call);
+      state.activeCall = null;
+
+      saveEverything();
+      renderClock();
+      renderEntries();
+      hideDialog("clockOutDialog");
+
+      alert(`Call saved as ${call.attended ? attendedPaidMinutes(call) : remotePaidMinutes(call)} minutes.`);
+    }
+
+    window.editEntry = function(id) {
       const call = state.calls.find(item => item.id === id);
       if (!call) return;
 
+      switchTab("entries");
+
       $("editId").value = call.id;
-      $("callDate").value = call.date;
-      $("callStart").value = call.callStart;
-      $("callEnd").value = call.callEnd;
-      $("caller").value = call.caller || "";
-      $("venue").value = call.venue || "";
-      $("details").value = call.details || "";
-      $("resolution").value = call.resolution || "";
-      $("attended").checked = Boolean(call.attended);
-      $("onsiteStart").value = call.onsiteStart || "";
-      $("onsiteEnd").value = call.onsiteEnd || "";
+      $("editDate").value = call.date;
+      $("editStart").value = call.callStart;
+      $("editEnd").value = call.callEnd;
+      $("editCaller").value = call.caller;
+      fillVenueSelect("editVenue", true);
+      $("editVenue").value = call.venue;
+      $("editProblem").value = call.problem;
+      $("editResolution").value = call.resolution;
+      $("editAttended").checked = Boolean(call.attended);
+      $("editOnsiteStart").value = call.onsiteStart || "";
+      $("editOnsiteEnd").value = call.onsiteEnd || "";
 
-      $("formTitle").textContent = "Edit call";
-      toggleAttendedFields();
-      updateAttendedHelp();
+      updateEditAttendedFields();
+      updateEditAttendedNotice();
 
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      $("editCard").classList.remove("hidden");
+      $("editCard").scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
-    window.deleteCall = function(id) {
+    function updateEditAttendedFields() {
+      $("editOnsiteFields").classList.toggle("hidden", !$("editAttended").checked);
+    }
+
+    function updateEditAttendedNotice() {
+      const notice = $("editAttendedNotice");
+
+      if (!$("editAttended").checked || !$("editDate").value) {
+        notice.classList.add("hidden");
+        return;
+      }
+
+      const editingId = $("editId").value;
+      const date = $("editDate").value;
+      const anotherAttendedExists = state.calls.some(call =>
+        call.attended && call.date === date && call.id !== editingId
+      );
+
+      const minimum = isWeekend(date) ? 4 : 1;
+
+      notice.textContent = anotherAttendedExists
+        ? "Another attended call exists for this date. This entry will use rounded onsite time."
+        : `First attended call for this date: at least ${minimum} hour${minimum === 1 ? "" : "s"} will be used when exported.`;
+
+      notice.classList.remove("hidden");
+    }
+
+    function submitEdit(event) {
+      event.preventDefault();
+
+      const id = $("editId").value;
+      const index = state.calls.findIndex(call => call.id === id);
+
+      if (index < 0) return;
+
+      const onsiteStart = $("editOnsiteStart").value;
+      const onsiteEnd = $("editOnsiteEnd").value;
+
+      if ((onsiteStart && !onsiteEnd) || (!onsiteStart && onsiteEnd)) {
+        alert("Enter both onsite times, or leave both blank.");
+        return;
+      }
+
+      state.calls[index] = {
+        ...state.calls[index],
+        date: $("editDate").value,
+        callStart: $("editStart").value,
+        callEnd: $("editEnd").value,
+        caller: $("editCaller").value.trim(),
+        venue: $("editVenue").value,
+        problem: $("editProblem").value.trim(),
+        resolution: $("editResolution").value.trim(),
+        attended: $("editAttended").checked,
+        onsiteStart,
+        onsiteEnd
+      };
+
+      saveEverything();
+      renderEntries();
+      closeEdit();
+    }
+
+    function closeEdit() {
+      $("editForm").reset();
+      $("editId").value = "";
+      $("editCard").classList.add("hidden");
+    }
+
+    window.deleteEntry = function(id) {
       const call = state.calls.find(item => item.id === id);
       if (!call) return;
 
       const confirmed = confirm(
-        `Delete this call?\n\n${displayDate(call.date)} · ${call.caller || "No caller"} · ${call.venue}`
+        `Delete this entry?\n\n${displayDate(call.date)} · ${call.caller} · ${call.venue}`
       );
 
       if (!confirmed) return;
 
       state.calls = state.calls.filter(item => item.id !== id);
-      save();
-      render();
-      updateAttendedHelp();
+      saveEverything();
+      renderEntries();
+      closeEdit();
     };
 
-    function submitCall(event) {
-      event.preventDefault();
-
-      const call = currentFormCall();
-
-      if (!call.date || !call.callStart || !call.callEnd || !call.venue || !call.details) {
-        alert("Please enter date, call start/end, venue, and call details.");
-        return;
-      }
-
-      if (call.attended && call.onsiteStart && !call.onsiteEnd) {
-        alert("Please enter an onsite finish time, or clear onsite start.");
-        return;
-      }
-
-      if (call.attended && call.onsiteEnd && !call.onsiteStart) {
-        alert("Please enter an onsite start time, or clear onsite finish.");
-        return;
-      }
-
-      const existingIndex = state.calls.findIndex(item => item.id === call.id);
-
-      if (existingIndex >= 0) {
-        call.createdAt = state.calls[existingIndex].createdAt;
-        state.calls[existingIndex] = call;
-      } else {
-        state.calls.push(call);
-      }
-
-      save();
-      render();
-      resetForm();
-    }
-
-    function applyEmployeeWeekHeader(ws) {
-      ws["A1"] = { t: "s", v: "After Hours On Call Log" };
-      ws["A2"] = {
-        t: "s",
-        v: `On Call Employee: ${state.settings.employeeName}    Week Ending: ${excelDate(state.settings.weekEnding)}`
-      };
-      ws["A4"] = {
-        t: "s",
-        v: "On Call Allowance. Payments and hours worked must be approved by the staff member’s direct manager before COB on Monday of each week by completing the After Hours On Call Log."
-      };
+    function syncSettings() {
+      state.settings.employeeName = $("employeeName").value.trim() || "Brendan T";
+      state.settings.weekEnding = $("weekEnding").value || nextSundayISO();
+      saveEverything();
     }
 
     function exportExcel() {
       if (!state.calls.length) {
-        alert("There are no calls to export.");
+        alert("There are no completed calls to export yet.");
         return;
       }
 
-      syncSettingsFromInputs();
+      syncSettings();
 
       const calls = sortedCalls(state.calls);
-
-      if (calls.length > 29) {
-        const continueExport = confirm(
-          `You have ${calls.length} calls. The supplied template visibly provides 29 rows. This export will include all calls in the generated workbook, but you should check the final form layout. Continue?`
-        );
-        if (!continueExport) return;
-      }
 
       const rows = [
         ["After Hours On Call Log"],
@@ -1017,26 +1393,23 @@
           call.attended && call.onsiteEnd ? displayTime(call.onsiteEnd) : "",
           call.caller,
           call.venue,
-          call.details,
+          call.problem,
           call.resolution,
-          nonAttendedMinutes(call) || "",
+          remotePaidMinutes(call) || "",
           attendedPaidMinutes(call) || ""
         ]);
       });
 
-      const nonAttended = calls.reduce((sum, call) => sum + nonAttendedMinutes(call), 0);
-      const attended = calls.reduce((sum, call) => sum + attendedPaidMinutes(call), 0);
-      const paidHours = (nonAttended + attended) / 60;
+      const remoteTotal = calls.reduce((total, call) => total + remotePaidMinutes(call), 0);
+      const attendedTotal = calls.reduce((total, call) => total + attendedPaidMinutes(call), 0);
+      const paidHours = (remoteTotal + attendedTotal) / 60;
 
       rows.push([]);
       rows.push(["", "", "", "", "", "", "", "", "Retainer:", "$350"]);
       rows.push(["", "", "", "", "", "", "", "", "Total Paid Hours:", paidHours]);
       rows.push([]);
-      rows.push([
-        "NB: Please enter a minimum call in column J for the first ATTENDED call per day where minimum call hrs were not exceeded."
-      ]);
+      rows.push(["NB: First attended call per day includes a 1-hour weekday minimum or 4-hour weekend minimum."]);
 
-      const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.aoa_to_sheet(rows);
 
       worksheet["!merges"] = [
@@ -1048,7 +1421,7 @@
 
       worksheet["!cols"] = [
         { wch: 5 },
-        { wch: 13 },
+        { wch: 14 },
         { wch: 14 },
         { wch: 22 },
         { wch: 22 },
@@ -1060,152 +1433,165 @@
         { wch: 17 }
       ];
 
-      worksheet["!rows"] = [
-        { hpt: 26 },
-        { hpt: 22 },
-        { hpt: 10 },
-        { hpt: 38 }
-      ];
-
+      const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Call Log");
 
-      const filenameEmployee = (state.settings.employeeName || "Employee")
+      const safeName = state.settings.employeeName
         .replace(/[^a-z0-9]+/gi, "_")
         .replace(/^_|_$/g, "");
 
-      const filenameDate = state.settings.weekEnding || localISODate();
-
       XLSX.writeFile(
         workbook,
-        `On_Call_Log_${filenameEmployee}_Week_Ending_${filenameDate}.xlsx`,
+        `On_Call_Log_${safeName}_Week_Ending_${state.settings.weekEnding}.xlsx`,
         { compression: true }
       );
     }
 
-    function backupJson() {
-      syncSettingsFromInputs();
+    function saveCopy() {
+      syncSettings();
 
-      const payload = {
-        app: "On Call Log",
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        settings: state.settings,
-        calls: state.calls
+      const savedCopy = {
+        savedAt: new Date().toISOString(),
+        employeeName: state.settings.employeeName,
+        weekEnding: state.settings.weekEnding,
+        calls: state.calls,
+        activeCall: state.activeCall
       };
 
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      const file = new Blob([JSON.stringify(savedCopy, null, 2)], {
         type: "application/json"
       });
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `On_Call_Backup_${localISODate()}.json`;
-      a.click();
+      const url = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `On_Call_Timesheet_Saved_Copy_${localISODate()}.json`;
+      link.click();
       URL.revokeObjectURL(url);
     }
 
-    async function restoreJson(file) {
+    function openRestorePicker() {
+      $("restoreInput").click();
+    }
+
+    async function restoreCopy(file) {
       if (!file) return;
 
       try {
-        const raw = await file.text();
-        const payload = JSON.parse(raw);
+        const text = await file.text();
+        const savedCopy = JSON.parse(text);
 
-        if (!Array.isArray(payload.calls)) {
-          throw new Error("The chosen file does not contain a calls array.");
+        if (!Array.isArray(savedCopy.calls)) {
+          throw new Error("This file does not look like a saved On Call Timesheet copy.");
         }
 
         const confirmed = confirm(
-          `Restore ${payload.calls.length} calls from this backup?\n\nThis replaces all calls currently stored on this device.`
+          `Restore ${savedCopy.calls.length} entries?\n\nThis replaces the entries currently stored on this device.`
         );
 
         if (!confirmed) return;
 
-        state.calls = payload.calls;
+        state.calls = savedCopy.calls;
+        state.activeCall = savedCopy.activeCall || null;
         state.settings = {
-          employeeName: payload.settings?.employeeName || "Brendan T",
-          weekEnding: payload.settings?.weekEnding || nextSundayISO()
+          employeeName: savedCopy.employeeName || "Brendan T",
+          weekEnding: savedCopy.weekEnding || nextSundayISO()
         };
 
         $("employeeName").value = state.settings.employeeName;
         $("weekEnding").value = state.settings.weekEnding;
 
-        save();
-        render();
-        resetForm();
-        alert("Backup restored.");
+        saveEverything();
+        renderClock();
+        renderEntries();
+        closeEdit();
+
+        alert("Saved copy restored.");
       } catch (error) {
-        alert(`Could not restore backup: ${error.message}`);
+        alert(`Could not restore that file: ${error.message}`);
       } finally {
         $("restoreInput").value = "";
       }
     }
 
-    function clearAllCalls() {
+    function deleteAllEntries() {
       if (!state.calls.length) {
-        alert("There are no local calls to delete.");
+        alert("There are no completed entries to delete.");
         return;
       }
 
       const confirmed = confirm(
-        "Delete ALL locally stored calls on this device?\n\nExport your Excel and download a JSON backup first. This cannot be undone."
+        "Delete every completed entry stored on this device?\n\nExport Excel or Save a copy first. This cannot be undone."
       );
 
       if (!confirmed) return;
 
       state.calls = [];
-      save();
-      render();
-      resetForm();
+      saveEverything();
+      renderEntries();
+      closeEdit();
     }
 
     function initialise() {
-      load();
-      populateVenueList();
+      loadEverything();
+
+      fillVenueSelect("clockInVenue", true);
+      fillVenueSelect("editVenue", true);
 
       $("employeeName").value = state.settings.employeeName;
       $("weekEnding").value = state.settings.weekEnding;
-      $("filterDate").value = "";
 
-      $("callForm").addEventListener("submit", submitCall);
+      updateLiveClock();
+      setInterval(updateLiveClock, 1000);
 
-      $("clearForm").addEventListener("click", resetForm);
+      renderClock();
+      renderEntries();
 
-      $("attended").addEventListener("change", () => {
-        toggleAttendedFields();
-        updateAttendedHelp();
+      document.querySelectorAll(".tab-button").forEach(button => {
+        button.addEventListener("click", () => switchTab(button.dataset.tab));
       });
 
-      $("callDate").addEventListener("change", updateAttendedHelp);
+      $("clockButton").addEventListener("click", startClockIn);
+      $("clockInForm").addEventListener("submit", submitClockIn);
+      $("clockOutForm").addEventListener("submit", submitClockOut);
 
-      $("callStart").addEventListener("change", () => {
-        if (!$("editId").value && $("callStart").value && $("callEnd").value === "") {
-          $("callEnd").value = addMinutesToTime($("callStart").value, 15);
-        }
-      });
+      $("cancelClockIn").addEventListener("click", () => hideDialog("clockInDialog"));
+      $("cancelClockOut").addEventListener("click", () => hideDialog("clockOutDialog"));
 
-      $("employeeName").addEventListener("change", syncSettingsFromInputs);
-      $("weekEnding").addEventListener("change", syncSettingsFromInputs);
+      $("clockInAttended").addEventListener("change", updateClockInAttendedNotice);
 
-      $("filterDate").addEventListener("change", render);
+      $("employeeName").addEventListener("change", syncSettings);
+      $("weekEnding").addEventListener("change", syncSettings);
 
+      $("filterDate").addEventListener("change", renderEntries);
       $("showAll").addEventListener("click", () => {
         $("filterDate").value = "";
-        render();
+        renderEntries();
       });
 
-      $("exportExcel").addEventListener("click", exportExcel);
-      $("backupJson").addEventListener("click", backupJson);
+      $("editAttended").addEventListener("change", () => {
+        updateEditAttendedFields();
+        updateEditAttendedNotice();
+      });
 
-      $("restoreJson").addEventListener("click", () => $("restoreInput").click());
-      $("restoreInput").addEventListener("change", event => restoreJson(event.target.files[0]));
+      $("editDate").addEventListener("change", updateEditAttendedNotice);
+      $("editForm").addEventListener("submit", submitEdit);
+      $("cancelEdit").addEventListener("click", closeEdit);
 
-      $("clearAll").addEventListener("click", clearAllCalls);
+      $("exportExcelClock").addEventListener("click", exportExcel);
+      $("exportExcelEntries").addEventListener("click", exportExcel);
 
-      resetForm();
-      render();
-      setStatus("Ready · saved locally", true);
+      $("saveCopyClock").addEventListener("click", saveCopy);
+      $("saveCopyEntries").addEventListener("click", saveCopy);
+
+      $("restoreCopyClock").addEventListener("click", openRestorePicker);
+      $("restoreCopyEntries").addEventListener("click", openRestorePicker);
+
+      $("restoreInput").addEventListener("change", event => {
+        restoreCopy(event.target.files[0]);
+      });
+
+      $("deleteAll").addEventListener("click", deleteAllEntries);
     }
 
     initialise();
