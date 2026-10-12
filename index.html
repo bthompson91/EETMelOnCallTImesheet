@@ -1,195 +1,28 @@
 <!doctype html>
 <html lang="en-AU">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b1020">
-  <title>On Call Timesheet</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>On Call Timesheet</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
-
 <body>
-  <div class="version">v0.5.1</div>
-  <button id="refresh" class="refresh" type="button" aria-label="Refresh app">↻</button>
-
-  <main class="app">
-    <header>
-      <div>
-        <h1>On Call Timesheet</h1>
-        <p>Clock in when a call begins, then clock out when it is finished.</p>
-      </div>
-      <div id="saved" class="saved">Saved on this device</div>
-    </header>
-
-    <nav>
-      <button data-page="clock" class="active" type="button">Clock</button>
-      <button data-page="entries" type="button">Entries</button>
-      <button data-page="stats" type="button">Stats</button>
-    </nav>
-
-    <section id="clockPage">
-      <div class="card clockcard">
-        <h2 id="clockTitle">Ready for a call</h2>
-        <div id="clock" class="clock">--:--</div>
-        <div id="today" class="today">Loading…</div>
-        <button id="clockButton" class="primary big" type="button">Clock in</button>
-        <div id="active" class="active hidden"></div>
-      </div>
-
-      <div class="card">
-        <h2>Weekly details</h2>
-
-        <div class="settings">
-          <label>
-            On-call employee
-            <input id="employee" value="Brendan T">
-          </label>
-
-          <label class="week">
-            Week ending
-            <input id="weekEnding" type="date">
-          </label>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Backups</h2>
-        <p>Calls are saved on this device. Save a copy before changing phones or clearing browser data.</p>
-
-        <div class="buttons">
-          <button id="saveCopy" type="button">Save a copy</button>
-          <button id="restoreCopy" type="button">Restore saved copy</button>
-        </div>
-      </div>
-    </section>
-
-    <section id="startPage" class="hidden">
-      <div class="card form">
-        <button class="back" data-go="clock" type="button">← Cancel</button>
-
-        <h2>Start call</h2>
-        <p>The timer starts when you press Start call.</p>
-
-        <form id="startForm">
-          <label>
-            Caller name
-            <input id="caller" required>
-          </label>
-
-          <label>
-            Venue
-            <select id="venue" required></select>
-          </label>
-
-          <label>
-            Problem
-            <textarea id="problem" required></textarea>
-          </label>
-
-          <button class="primary" type="submit">Start call</button>
-        </form>
-      </div>
-    </section>
-
-    <section id="finishPage" class="hidden">
-      <div class="card form">
-        <button class="back" data-go="clock" type="button">← Keep call running</button>
-
-        <h2>Finish call</h2>
-        <p id="finishInfo"></p>
-
-        <form id="finishForm">
-          <label>
-            Resolution
-            <textarea id="resolution" required></textarea>
-          </label>
-
-          <label class="check">
-            <input id="attended" type="checkbox">
-            Attended onsite
-          </label>
-
-          <div id="onsite" class="hidden">
-            <div class="settings">
-              <label>
-                Onsite start
-                <input id="onsiteStart" type="time">
-              </label>
-
-              <label>
-                Onsite finish
-                <input id="onsiteEnd" type="time">
-              </label>
-            </div>
-          </div>
-
-          <p id="minimum" class="notice hidden"></p>
-
-          <button class="primary" type="submit">Save finished call</button>
-        </form>
-      </div>
-    </section>
-
-    <section id="entriesPage" class="hidden">
-      <div class="card">
-        <h2>All entries</h2>
-
-        <div class="totals">
-          <div>
-            <span>Calls shown</span>
-            <b id="callCount">0</b>
-          </div>
-
-          <div>
-            <span>Remote time</span>
-            <b id="remoteTime">0 min</b>
-          </div>
-
-          <div>
-            <span>Attended time</span>
-            <b id="attendedTime">0 min</b>
-          </div>
-
-          <div>
-            <span>Total paid time</span>
-            <b id="totalTime">0 min</b>
-          </div>
-        </div>
-
-        <div id="entryList"></div>
-
-        <div class="buttons">
-          <button id="saveCopy2" type="button">Save a copy</button>
-          <button id="restoreCopy2" type="button">Restore saved copy</button>
-          <button id="deleteAll" class="danger" type="button">Delete all entries</button>
-        </div>
-      </div>
-    </section>
-
-    <section id="statsPage" class="hidden">
-      <div class="card">
-        <h2>Call statistics</h2>
-        <p id="statsText">No completed calls recorded yet.</p>
-
-        <div class="charts">
-          <div class="chartbox">
-            <h3>Calls by time of day</h3>
-            <div id="timeChart"></div>
-          </div>
-
-          <div class="chartbox">
-            <h3>Calls by venue</h3>
-            <div id="venueChart"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <input id="restoreFile" type="file" accept=".json" class="hidden">
-  </main>
-
-  <div id="error" class="error hidden"></div>
-
-  <script src="app.js"></script>
+<div class="version">v0.5.2</div>
+<button id="refresh" class="refresh" type="button" aria-label="Refresh app">↻</button>
+<main class="app">
+<header><div><h1>On Call Timesheet</h1><p>Clock in when a call begins, then clock out when it is finished.</p></div><div id="saved" class="saved">Saved on this device</div></header>
+<nav><button data-page="clock" class="active" type="button">Clock</button><button data-page="entries" type="button">Entries</button><button data-page="stats" type="button">Stats</button></nav>
+<section id="clockPage"><div class="card clockcard"><h2 id="clockTitle">Ready for a call</h2><div id="clock" class="clock">--:--</div><div id="today" class="today">Loading…</div><button id="clockButton" class="primary big" type="button">Clock in</button><div id="active" class="active hidden"></div></div><div class="card"><h2>Weekly details</h2><div class="settings"><label>On-call employee<input id="employee" value="Brendan T"></label><label class="week">Week ending<input id="weekEnding" type="date"></label></div></div><div class="card"><h2>Backups & export</h2><p>Calls are saved on this device. Save a copy before changing phones or clearing browser data.</p><div class="buttons"><button id="saveCopy" type="button">Save a copy</button><button id="restoreCopy" type="button">Restore saved copy</button><button id="exportExcel" type="button">Export Call Log</button></div></div></section>
+<section id="startPage" class="hidden"><div class="card form"><button class="back" data-go="clock" type="button">← Cancel</button><h2>Start call</h2><p>The timer starts when you press Start call.</p><form id="startForm"><label>Caller name<input id="caller" required></label><label>Venue<select id="venue" required></select></label><label>Problem<textarea id="problem" required></textarea></label><button class="primary" type="submit">Start call</button></form></div></section>
+<section id="finishPage" class="hidden"><div class="card form"><button class="back" data-go="clock" type="button">← Keep call running</button><h2>Finish call</h2><p id="finishInfo"></p><form id="finishForm"><label>Resolution<textarea id="resolution" required></textarea></label><label class="check"><input id="attended" type="checkbox">Attended onsite</label><div id="onsite" class="hidden"><div class="settings"><label>Onsite start<input id="onsiteStart" type="time"></label><label>Onsite finish<input id="onsiteEnd" type="time"></label></div></div><p id="minimum" class="notice hidden"></p><button class="primary" type="submit">Save finished call</button></form></div></section>
+<section id="editPage" class="hidden"><div class="card form"><button class="back" data-go="entries" type="button">← Cancel</button><h2>Edit call</h2><form id="editForm"><div class="settings"><label>Date<input id="editDate" type="date" required></label><label>Start<input id="editStart" type="time" required></label><label>Finish<input id="editEnd" type="time" required></label></div><label>Caller name<input id="editCaller" required></label><label>Venue<select id="editVenue" required></select></label><label>Problem<textarea id="editProblem" required></textarea></label><label>Resolution<textarea id="editResolution" required></textarea></label><label class="check"><input id="editAttended" type="checkbox">Attended onsite</label><div id="editOnsite"><div class="settings"><label>Onsite start<input id="editOnsiteStart" type="time"></label><label>Onsite finish<input id="editOnsiteEnd" type="time"></label></div></div><button class="primary" type="submit">Save changes</button></form></div></section>
+<section id="entriesPage" class="hidden"><div class="card"><h2>All entries</h2><div class="totals"><div><span>Calls shown</span><b id="callCount">0</b></div><div><span>Remote time</span><b id="remoteTime">0 min</b></div><div><span>Attended time</span><b id="attendedTime">0 min</b></div><div><span>Total paid time</span><b id="totalTime">0 min</b></div></div><div id="entryList"></div><div class="buttons"><button id="saveCopy2" type="button">Save a copy</button><button id="restoreCopy2" type="button">Restore saved copy</button><button id="exportExcel2" type="button">Export Call Log</button><button id="deleteAll" class="danger" type="button">Delete all entries</button></div></div></section>
+<section id="statsPage" class="hidden"><div class="card"><h2>Call statistics</h2><p id="statsText">No completed calls recorded yet.</p><div class="charts"><div class="chartbox"><h3>Calls by time of day</h3><div id="timeChart"></div></div><div class="chartbox"><h3>Calls by venue</h3><div id="venueChart"></div></div></div></div></section>
+<input id="restoreFile" type="file" accept=".json" class="hidden">
+</main>
+<div id="error" class="error hidden"></div>
+<script src="app.js"></script>
 </body>
 </html>
