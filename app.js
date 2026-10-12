@@ -94,10 +94,10 @@ function isWeekend(date) {
 
 function escapeHtml(value) {
   return String(value || "")
-    .replaceAll("&", "&")
-    .replaceAll("<", "<")
-    .replaceAll(">", ">")
-    .replaceAll('"', "");
+    .replaceAll("\u0026", "\u0026amp;")
+    .replaceAll("\u003C", "\u0026lt;")
+    .replaceAll("\u003E", "\u0026gt;")
+    .replaceAll("\u0022", "\u0026quot;");
 }
 
 function orderedCalls(calls) {
