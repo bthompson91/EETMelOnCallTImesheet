@@ -60,3 +60,42 @@
   };
   button.addEventListener("click", syncToDrive);
 })();
+
+(() => {
+  function cycleKey(call) {
+    const [year, month, day] = call.date.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    const weekday = (date.getUTCDay() + 6) % 7;
+    const previousCycle = weekday === 0 && timeMinutes(call.start) < 540;
+    date.setUTCDate(date.getUTCDate() - weekday - (previousCycle ? 7 : 0));
+    return date.toISOString().slice(0, 10);
+  }
+  const originalRenderEntries = renderEntries;
+  renderEntries = function () {
+    originalRenderEntries();
+    const cycles = new Map();
+    for (const call of db.calls) {
+      const key = cycleKey(call);
+      cycles.set(key, (cycles.get(key) || 0) + paidMinutes(call));
+    }
+    let payable = 0;
+    let deducted = 0;
+    for (const gross of cycles.values()) {
+      payable += Math.max(0, gross - WEEKLY_RETAINER_MINUTES);
+      deducted += Math.min(gross, WEEKLY_RETAINER_MINUTES);
+    }
+    $("totalTime").textContent = durationText(payable);
+    $("totalTime").title = "After a 2-hour retainer per Monday 9 am cycle; unused retainer does not carry between cycles.";
+    let note = document.getElementById("cycleRetainerNote");
+    if (!note) {
+      note = document.createElement("p");
+      note.id = "cycleRetainerNote";
+      document.getElementById("entryList").before(note);
+    }
+    note.textContent = `Retainer deducted: ${durationText(deducted)} across ${cycles.size} cycle(s). Cycles run Monday 9:00 am to Monday 9:00 am Melbourne time, using recorded call start times.`;
+  };
+  const style = document.createElement("style");
+  style.textContent = '.settings label.week { flex: 0 0 auto; width: 170px; max-width: 100%; align-self: flex-start; } #weekEnding { width: 100%; min-width: 0; max-width: 100%; }';
+  document.head.append(style);
+  renderEntries();
+})();
