@@ -2,6 +2,10 @@
 
 const $ = (id) => document.getElementById(id);
 
+const GOOGLE_CLIENT_ID = "564639669382-se2jp3fmbo11cjgd7p5jv3ehje7ovu8j.apps.googleusercontent.com";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
+const DRIVE_FILE_NAME = "On_Call_Timesheet_Data.json";
+
 const VENUES = [
   "1 Hotel", "AC By Marriott Melbourne Southbank", "CENTREPIECE", "Crown Melbourne",
   "Crowne Plaza", "Doubletree by Hilton", "Events Flemington", "Hilton Melbourne Little Queen St",
@@ -13,6 +17,7 @@ const VENUES = [
 
 const STORAGE_KEY = "oncall.v051";
 let editingId = null;
+let driveToken = null;
 
 let db = { calls: [], active: null, employee: "Brendan T", week: "" };
 
@@ -457,6 +462,115 @@ async function restore(file) {
   }
 }
 
+function setDriveStatus(message) {
+  $("driveStatus").textContent = message;
+}
+
+function getDriveToken() {
+  return new Promise((resolve, reject) => {
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error("Google sign-in is not available yet. Refresh and try again."));
+      return;
+    }
+
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: (response) => {
+        if (response.error) {
+          reject(new Error(response.error));
+          return;
+        }
+        driveToken = response.access_token;
+        resolve(response.access_token);
+      }
+    });
+
+    client.requestAccessToken();
+  });
+}
+
+async function findDriveFile(token) {
+  const response = await fetch(
+    "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc",
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (!response.ok) throw new Error("Could not check Google Drive.");
+  const data = await response.json();
+  return data.files?.[0] || null;
+}
+
+async function syncToDrive() {
+  try {
+    setDriveStatus("Connecting to Google Drive…");
+    const token = driveToken || await getDriveToken();
+    const existing = await findDriveFile(token);
+    const metadata = { name: DRIVE_FILE_NAME, parents: ["appDataFolder"] };
+    const form = new FormData();
+    form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+    form.append("file", new Blob([JSON.stringify(db)], { type: "application/json" }));
+
+    const url = existing
+      ? `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`
+      : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+
+    const response = await fetch(url, {
+      method: existing ? "PATCH" : "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form
+    });
+
+    if (!response.ok) throw new Error("Google Drive upload failed.");
+    setDriveStatus(`Synced ${db.calls.length} call${db.calls.length === 1 ? "" : "s"} to Google Drive.`);
+  } catch (error) {
+    driveToken = null;
+    setDriveStatus("Google Drive sync failed.");
+    alert(error.message);
+  }
+}
+
+async function restoreFromDrive() {
+  try {
+    setDriveStatus("Checking Google Drive…");
+    const token = driveToken || await getDriveToken();
+    const file = await findDriveFile(token);
+
+    if (!file) {
+      setDriveStatus("No Google Drive backup found yet.");
+      alert("No Google Drive backup found. Use Sync now first.");
+      return;
+    }
+
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!response.ok) throw new Error("Could not download the Google Drive backup.");
+    const restored = await response.json();
+
+    if (!Array.isArray(restored.calls)) throw new Error("Invalid Google Drive backup.");
+
+    if (db.calls.length && !confirm(`Replace the ${db.calls.length} local call${db.calls.length === 1 ? "" : "s"} with the Google Drive backup?`)) {
+      setDriveStatus("Google Drive restore cancelled.");
+      return;
+    }
+
+    db = restored;
+    $("employee").value = db.employee || "Brendan T";
+    $("weekEnding").value = db.week || "";
+    save();
+    renderHome();
+    renderEntries();
+    renderStats();
+    setDriveStatus(`Restored ${db.calls.length} call${db.calls.length === 1 ? "" : "s"} from Google Drive.`);
+  } catch (error) {
+    driveToken = null;
+    setDriveStatus("Google Drive restore failed.");
+    alert(error.message);
+  }
+}
+
 async function exportExcel() {
   if (!db.calls.length) {
     alert("No completed calls to export.");
@@ -557,6 +671,19 @@ function initialise() {
   ["saveCopy", "saveCopy2"].forEach((id) => $(id).addEventListener("click", backup));
   ["restoreCopy", "restoreCopy2"].forEach((id) => $(id).addEventListener("click", () => $("restoreFile").click()));
   ["exportExcel", "exportExcel2"].forEach((id) => $(id).addEventListener("click", exportExcel));
+
+  $("googleSignIn").addEventListener("click", async () => {
+    try {
+      await getDriveToken();
+      setDriveStatus("Connected to Google Drive. Tap Sync now to save a private backup.");
+    } catch (error) {
+      setDriveStatus("Google Drive connection failed.");
+      alert(error.message);
+    }
+  });
+
+  $("syncDrive").addEventListener("click", syncToDrive);
+  $("restoreDrive").addEventListener("click", restoreFromDrive);
 
   $("restoreFile").addEventListener("change", (event) => restore(event.target.files[0]));
 
