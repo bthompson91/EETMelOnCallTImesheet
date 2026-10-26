@@ -5,12 +5,13 @@ const $ = (id) => document.getElementById(id);
 const GOOGLE_CLIENT_ID = "564639669382-se2jp3fmbo11cjgd7p5jv3ehje7ovu8j.apps.googleusercontent.com";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
 const DRIVE_FILE_NAME = "On_Call_Timesheet_Data.json";
+const WEEKLY_RETAINER_MINUTES = 120;
 
 const VENUES = [
   "1 Hotel", "AC By Marriott Melbourne Southbank", "CENTREPIECE", "Crown Melbourne",
   "Crowne Plaza", "Doubletree by Hilton", "Events Flemington", "Hilton Melbourne Little Queen St",
   "Hyatt Place Essendon Fields", "Hyde Melbourne Place", "Marriott Melbourne", "MCG",
-  "Mel Base", "Melbourne Marriott Hotel Docklands", "Melbourne Showgrounds", "Mercure Doncaster",
+  "Mel Base", "Melbourne Melbourne Marriott Hotel Docklands", "Melbourne Showgrounds", "Mercure Doncaster",
   "Pan Pacific", "PARKROYAL Airport", "Park Hyatt", "Pullman Albert Park",
   "The Langham", "Vibe Docklands", "Warehouse", "Westin"
 ];
@@ -56,6 +57,13 @@ function nowTime() {
 function dateObject(value) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);
+}
+
+function weekStartISO(value) {
+  const date = dateObject(value);
+  const weekday = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - weekday);
+  return dateISO(date);
 }
 
 function displayDate(value) {
@@ -179,11 +187,25 @@ function renderEntries() {
   const calls = orderedCalls(db.calls);
   const remoteTotal = calls.filter((call) => !call.attended).reduce((total, call) => total + paidMinutes(call), 0);
   const attendedTotal = calls.filter((call) => call.attended).reduce((total, call) => total + paidMinutes(call), 0);
+  const grossTotal = remoteTotal + attendedTotal;
+
+  const weekTotals = calls.reduce((totals, call) => {
+    const week = weekStartISO(call.date);
+    totals[week] = (totals[week] || 0) + paidMinutes(call);
+    return totals;
+  }, {});
+
+  const retainerWeeks = Object.keys(weekTotals).length;
+  const retainerMinutes = retainerWeeks * WEEKLY_RETAINER_MINUTES;
+  const totalAfterRetainer = Math.max(0, grossTotal - retainerMinutes);
 
   $("callCount").textContent = calls.length;
   $("remoteTime").textContent = durationText(remoteTotal);
   $("attendedTime").textContent = durationText(attendedTotal);
-  $("totalTime").textContent = durationText(remoteTotal + attendedTotal);
+  $("totalTime").textContent = durationText(totalAfterRetainer);
+  $("totalTime").title = retainerWeeks
+    ? `Includes ${retainerWeeks} weekly retainer credit${retainerWeeks === 1 ? "" : "s"} of ${durationText(retainerMinutes)}.`
+    : "";
 
   if (!calls.length) {
     $("entryList").innerHTML = "<p>No entries yet.</p>";
@@ -490,13 +512,31 @@ function getDriveToken() {
   });
 }
 
-async function findDriveFile(token) {
-  const response = await fetch(
-    "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc",
-    { headers: { Authorization: `Bearer ${token}` } }
+async function driveJsonRequest(url, options = {}) {
+  const token = driveToken || await getDriveToken();
+  let response = await fetch(url, {
+    ...options,
+    headers: { ...options.headers, Authorization: `Bearer ${token}` }
+  });
+
+  if (response.status === 401) {
+    driveToken = null;
+    const refreshedToken = await getDriveToken();
+    response = await fetch(url, {
+      ...options,
+      headers: { ...options.headers, Authorization: `Bearer ${refreshedToken}` }
+    });
+  }
+
+  return response;
+}
+
+async function findDriveFile() {
+  const response = await driveJsonRequest(
+    "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc"
   );
 
-  if (!response.ok) throw new Error("Could not check Google Drive.");
+  if (!response.ok) throw new Error(`Could not check Google Drive (${response.status}).`);
   const data = await response.json();
   return data.files?.[0] || null;
 }
@@ -504,24 +544,24 @@ async function findDriveFile(token) {
 async function syncToDrive() {
   try {
     setDriveStatus("Connecting to Google Drive…");
-    const token = driveToken || await getDriveToken();
-    const existing = await findDriveFile(token);
+    const existing = await findDriveFile();
     const metadata = { name: DRIVE_FILE_NAME, parents: ["appDataFolder"] };
-    const form = new FormData();
-    form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-    form.append("file", new Blob([JSON.stringify(db)], { type: "application/json" }));
 
-    const url = existing
-      ? `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`
-      : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+    const upload = async () => {
+      const form = new FormData();
+      form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+      form.append("file", new Blob([JSON.stringify(db)], { type: "application/json" }));
 
-    const response = await fetch(url, {
-      method: existing ? "PATCH" : "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: form
-    });
+      const url = existing
+        ? `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`
+        : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
 
-    if (!response.ok) throw new Error("Google Drive upload failed.");
+      return driveJsonRequest(url, { method: existing ? "PATCH" : "POST", body: form });
+    };
+
+    const response = await upload();
+    if (!response.ok) throw new Error(`Google Drive upload failed (${response.status}).`);
+
     setDriveStatus(`Synced ${db.calls.length} call${db.calls.length === 1 ? "" : "s"} to Google Drive.`);
   } catch (error) {
     driveToken = null;
@@ -533,8 +573,7 @@ async function syncToDrive() {
 async function restoreFromDrive() {
   try {
     setDriveStatus("Checking Google Drive…");
-    const token = driveToken || await getDriveToken();
-    const file = await findDriveFile(token);
+    const file = await findDriveFile();
 
     if (!file) {
       setDriveStatus("No Google Drive backup found yet.");
@@ -542,13 +581,10 @@ async function restoreFromDrive() {
       return;
     }
 
-    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await driveJsonRequest(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+    if (!response.ok) throw new Error(`Could not download the Google Drive backup (${response.status}).`);
 
-    if (!response.ok) throw new Error("Could not download the Google Drive backup.");
     const restored = await response.json();
-
     if (!Array.isArray(restored.calls)) throw new Error("Invalid Google Drive backup.");
 
     if (db.calls.length && !confirm(`Replace the ${db.calls.length} local call${db.calls.length === 1 ? "" : "s"} with the Google Drive backup?`)) {
