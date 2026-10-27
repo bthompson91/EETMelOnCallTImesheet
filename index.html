@@ -5,13 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>On Call Timesheet</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=0.5.5">
+<style>
+header { background: #0b1020; opacity: 1; backdrop-filter: none; -webkit-backdrop-filter: none; filter: none; }
+.version, .refresh { background: #0b1020; opacity: 1; backdrop-filter: none; -webkit-backdrop-filter: none; filter: none; z-index: 10; }
+</style>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
-<div class="version">v0.5.4</div>
-<button id="refresh" class="refresh" type="button" aria-label="Refresh app">↻</button>
+<div class="version">v0.5.5</div>
+<button id="refresh" class="refresh" type="button" aria-label="Reload app and fetch fresh files" title="Reload app and fetch fresh files">↻</button>
 <main class="app">
 <header><div><h1>On Call Timesheet</h1><p>Clock in when a call begins, then clock out when it is finished.</p></div><div id="saved" class="saved">Saved on this device</div></header>
 <nav><button data-page="clock" class="active" type="button">Clock</button><button data-page="entries" type="button">Entries</button><button data-page="stats" type="button">Stats</button></nav>
@@ -25,7 +29,6 @@
 <p class="today legal-links"><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Use</a></p>
 </main>
 <div id="error" class="error hidden"></div>
-<script src="app.js"></script>
-<script src="drive-fix.js?v=0.5.4"></script>
+<script src="bootstrap.js?v=0.5.5"></script>
 </body>
 </html>
