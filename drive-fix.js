@@ -99,3 +99,57 @@
   document.head.append(style);
   renderEntries();
 })();
+
+(() => {
+  const previousRender = renderEntries;
+  renderEntries = function () {
+    previousRender();
+    const list = document.getElementById("entryList");
+    const groups = Array.from(list.querySelectorAll(":scope > .date-group"));
+    for (const group of groups.reverse()) {
+      const rows = Array.from(group.querySelectorAll(":scope > .entry"));
+      for (const row of rows.reverse()) group.append(row);
+      list.append(group);
+    }
+  };
+  for (const id of ["saveCopy2", "restoreCopy2", "exportExcel2"]) {
+    document.getElementById(id)?.remove();
+  }
+
+  const signIn = document.getElementById("googleSignIn");
+  let expiryTimer;
+  function updateSignIn() {
+    signIn.classList.toggle("hidden", Boolean(driveToken));
+  }
+  const previousToken = getDriveToken;
+  getDriveToken = async function () {
+    try {
+      const token = await previousToken();
+      clearTimeout(expiryTimer);
+      expiryTimer = setTimeout(() => {
+        driveToken = null;
+        updateSignIn();
+      }, 50 * 60 * 1000);
+      updateSignIn();
+      return token;
+    } catch (error) {
+      driveToken = null;
+      updateSignIn();
+      throw error;
+    }
+  };
+  const previousRequest = driveJsonRequest;
+  driveJsonRequest = async function (...args) {
+    const response = await previousRequest(...args);
+    if (response.status === 401) driveToken = null;
+    updateSignIn();
+    return response;
+  };
+  const previousStatus = setDriveStatus;
+  setDriveStatus = function (message) {
+    previousStatus(message);
+    updateSignIn();
+  };
+  updateSignIn();
+  renderEntries();
+})();
