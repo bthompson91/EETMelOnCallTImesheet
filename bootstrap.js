@@ -1,6 +1,6 @@
 "use strict";
 (() => {
-  const version="0.5.6";
+  const version="0.5.9";
   document.querySelector('.version').textContent='v'+version;
   const stamp=new URL(location.href).searchParams.get('_refresh');
   const key=version+(stamp?'-'+stamp:'');
@@ -15,7 +15,17 @@
     const script=document.createElement('script');script.src=path+'?v='+encodeURIComponent(key);
     script.onload=resolve;script.onerror=()=>reject(new Error('Could not load '+path+'. Check your connection and refresh.'));document.body.append(script);
   });
-  load('app.js').then(()=>load('drive-fix.js')).then(()=>load('ai-summaries.js')).catch(error=>{
+  load('app.js').then(()=>load('drive-fix.js')).then(async()=>{
+    const originalEntries=renderEntries;
+    try {
+      await load('ai-summaries.js');
+    } finally {
+      renderEntries=originalEntries;
+      renderEntries();
+      document.querySelector('.version').textContent='v'+version;
+    }
+    await load('call-reasons.js');
+  }).catch(error=>{
     const box=document.getElementById('error');box.textContent=error.message;box.classList.remove('hidden');
   });
 })();
