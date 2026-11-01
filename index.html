@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>On Call Timesheet</title>
-<link rel="stylesheet" href="styles.css?v=0.5.5">
+<link rel="stylesheet" href="styles.css?v=0.5.13">
 <style>
 header { background: #0b1020; opacity: 1; backdrop-filter: none; -webkit-backdrop-filter: none; filter: none; }
 .version, .refresh { background: #0b1020; opacity: 1; backdrop-filter: none; -webkit-backdrop-filter: none; filter: none; z-index: 10; }
@@ -14,7 +14,7 @@ header { background: #0b1020; opacity: 1; backdrop-filter: none; -webkit-backdro
 <script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
-<div class="version">v0.5.5</div>
+<div class="version">v0.5.13</div>
 <button id="refresh" class="refresh" type="button" aria-label="Reload app and fetch fresh files" title="Reload app and fetch fresh files">↻</button>
 <main class="app">
 <header><div><h1>On Call Timesheet</h1><p>Clock in when a call begins, then clock out when it is finished.</p></div><div id="saved" class="saved">Saved on this device</div></header>
@@ -29,6 +29,19 @@ header { background: #0b1020; opacity: 1; backdrop-filter: none; -webkit-backdro
 <p class="today legal-links"><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Use</a></p>
 </main>
 <div id="error" class="error hidden"></div>
-<script src="bootstrap.js?v=0.5.5"></script>
+<script>
+"use strict";
+(() => {
+ const token=new URL(location.href).searchParams.get('_refresh')||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+ window.__oncallAssetToken=token;
+ const stylesheet=document.querySelector('link[rel="stylesheet"]'),css=new URL('styles.css',location.href);css.searchParams.set('_asset',token);stylesheet.href=css.href;
+ const url=new URL('bootstrap.js',location.href);url.searchParams.set('_asset',token);
+ fetch(url.href,{cache:'no-store',credentials:'same-origin'}).then(async response=>{
+  if(!response.ok)throw new Error('Could not fetch startup files ('+response.status+').');
+  const text=await response.text(),blob=URL.createObjectURL(new Blob([text],{type:'text/javascript'}));
+  return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=blob;script.onload=()=>{URL.revokeObjectURL(blob);resolve();};script.onerror=()=>{URL.revokeObjectURL(blob);reject(new Error('Could not run startup files.'));};document.body.append(script);});
+ }).catch(error=>{const box=document.getElementById('error');box.textContent=error.message+' Saved entries have not been cleared. Check your connection and retry.';box.classList.remove('hidden');});
+})();
+</script>
 </body>
 </html>
