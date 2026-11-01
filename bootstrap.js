@@ -1,6 +1,6 @@
 "use strict";
 (() => {
- const version='0.5.13';document.querySelector('.version').textContent='v'+version;
+ const version='0.5.14';document.querySelector('.version').textContent='v'+version;
  const token=window.__oncallAssetToken||new URL(location.href).searchParams.get('_refresh')||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
  const css=new URL('styles.css',location.href);css.searchParams.set('_asset',token);document.querySelector('link[rel="stylesheet"]').href=css.href;
  document.getElementById('refresh').addEventListener('click',event=>{
@@ -26,5 +26,5 @@
   const formatStatus=()=>{status.style.fontStyle=status.textContent.trim()===completed?'italic':'normal';};
   new MutationObserver(formatStatus).observe(status,{childList:true,characterData:true,subtree:true});formatStatus();
   return load('call-reasons.js');
- }).then(()=>load('language-review.js')).then(()=>{document.querySelector('.version').textContent='v'+version;}).catch(error=>{const box=document.getElementById('error');box.textContent=error.message+' Saved entries have not been cleared.';box.classList.remove('hidden');});
+ }).then(()=>load('language-review.js')).then(()=>load('template-export.js')).then(()=>{document.querySelector('.version').textContent='v'+version;}).catch(error=>{const box=document.getElementById('error');box.textContent=error.message+' Saved entries have not been cleared.';box.classList.remove('hidden');});
 })();
