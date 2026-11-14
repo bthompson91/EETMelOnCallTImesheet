@@ -1,6 +1,6 @@
 "use strict";
 (() => {
- const version='0.5.18';document.querySelector('.version').textContent='v'+version;
+ const version='0.5.19';document.querySelector('.version').textContent='v'+version;
  const token=window.__oncallAssetToken||new URL(location.href).searchParams.get('_refresh')||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
  const css=new URL('targo-theme.css',location.href);css.searchParams.set('_asset',token);document.querySelector('link[rel="stylesheet"]').href=css.href;
  document.getElementById('refresh').addEventListener('click',event=>{
