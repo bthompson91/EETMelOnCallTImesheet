@@ -1,6 +1,6 @@
 "use strict";
 (() => {
- const url=new URL('targo-theme.css',location.href);url.searchParams.set('_asset',window.__oncallAssetToken||Date.now());const link=document.createElement('link');link.rel='stylesheet';link.href=url.href;document.head.append(link);document.querySelector('meta[name="theme-color"]').content='#141414';
+ document.querySelector('meta[name="theme-color"]').content='#141414';
  const venue=$('venue');venue.required=false;venue.closest('label').firstChild.textContent='Venue (optional at start)';
  const label=document.createElement('label');label.className='hidden';label.id='finishVenueField';label.textContent='Venue';const select=document.createElement('select');select.id='finishVenue';select.setAttribute('aria-describedby','finishVenueHint');label.append(select);const hint=document.createElement('small');hint.id='finishVenueHint';hint.textContent='Choose the venue before saving this call.';label.append(hint);$('finishForm').prepend(label);
  const oldBeginFinish=beginFinish;beginFinish=function(){if(!db.active)return;oldBeginFinish();const missing=!String(db.active.venue||'').trim();label.classList.toggle('hidden',!missing);select.required=missing;select.disabled=!missing;populateVenues('finishVenue',db.active.venue||'');if(missing)select.focus();};
